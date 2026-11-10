@@ -27,12 +27,39 @@ function Avatar({ name, src, size = "normal" }: { name: string; src?: string; si
 function SectionTitle({ eyebrow, title, subtitle, action }: { eyebrow?: string; title: string; subtitle?: string; action?: React.ReactNode }) { return <div className="section-title"><div>{eyebrow && <div className="eyebrow">{eyebrow}</div>}<h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>{action}</div>; }
 function CardHead({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) { return <div className="card-head"><div><h3>{title}</h3>{subtitle && <p>{subtitle}</p>}</div>{action}</div>; }
 
+type Workspace = { name: string; description: string };
+const workspaces: Workspace[] = [
+  { name: "Cristo Alegria GYN", description: "Missão Goiânia" },
+  { name: "Cristo Alegria SP", description: "Missão São Paulo" },
+  { name: "Cristo Alegria Belém", description: "Missão Belém" },
+  { name: "Cristo Alegria Brasil", description: "Membros externos" },
+];
+
+function WorkspaceSelector({ onNotice }: { onNotice: (message: string) => void }) {
+  const [active, setActive] = useState(workspaces[0]);
+  const [open, setOpen] = useState(false);
+
+  return <div className="workspace-picker" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }}>
+    <button className="workspace-switch" type="button" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+      <span className="workspace-avatar">C</span>
+      <span className="workspace-copy"><strong>{active.name}</strong><small>{active.description}</small></span>
+      <ChevronDown size={15} />
+    </button>
+    <AnimatePresence>{open && <motion.div className="workspace-menu" role="listbox" aria-label="Selecionar workspace" initial={{ opacity: 0, y: -5, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: .14 }}>
+      <div className="workspace-menu-heading">SEUS WORKSPACES</div>
+      {workspaces.map((workspace) => <button type="button" role="option" aria-selected={active.name === workspace.name} className={`workspace-option ${active.name === workspace.name ? "workspace-option-active" : ""}`} key={workspace.name} onClick={() => { setActive(workspace); setOpen(false); onNotice(`Workspace ativo: ${workspace.name}`); }}>
+        <span className="workspace-option-mark">C</span><span className="workspace-option-copy"><strong>{workspace.name}</strong><small>{workspace.description}</small></span>{active.name === workspace.name && <Check size={15} />}
+      </button>)}
+    </motion.div>}</AnimatePresence>
+  </div>;
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>("Visão geral");
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
   const [notice, setNotice] = useState("");
   const [member, setMember] = useState<Member | null>(null);
   const [modal, setModal] = useState<"event" | "member" | "participant" | "organizer" | "qr" | null>(null);
@@ -71,7 +98,7 @@ export default function App() {
     {mobileOpen && <button className="mobile-scrim" onClick={() => setMobileOpen(false)} aria-label="Fechar menu" />}
     <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
       <button className="brand" onClick={() => go("Visão geral")}><span className="brand-mark"><BrandLogo /></span><span className="brand-text">Presen<span className="brand-highlight">CA</span></span><span className="brand-dot">•</span></button>
-      <button className="workspace-switch"><span className="workspace-avatar">C</span><span className="workspace-copy"><strong>Cristo Alegria GYN</strong><small>Missão Goiânia</small></span><ChevronDown size={15} /></button>
+      <WorkspaceSelector onNotice={setNotice} />
       <div className="nav-scroll">{["PRINCIPAL", "COMUNIDADE", "GESTÃO"].map((group) => <div className="nav-group" key={group}><div className="nav-label">{group}</div>{navigation.filter((item) => item.group === group).map(({ label, icon: Icon }) => <button key={label} onClick={() => go(label)} className={`nav-link ${page === label ? "nav-active" : ""}`}><Icon size={17} strokeWidth={1.8} /><span>{label}</span>{label === "Eventos" && <span className="nav-count">3</span>}</button>)}</div>)}
         <div className="nav-group nav-bottom-group"><div className="nav-label">PREFERÊNCIAS</div><button onClick={() => go("Configurações")} className={`nav-link ${page === "Configurações" ? "nav-active" : ""}`}><Settings size={17} strokeWidth={1.8} /><span>Configurações</span></button></div>
       </div>

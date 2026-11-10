@@ -1,0 +1,5 @@
+"use client";
+import { useRouter } from "next/navigation";
+import { BrandLogo } from "@/components/brand-logo";
+import { ArrowLeft, Church, Home } from "lucide-react";
+export default function NotFound() { const router = useRouter(); return <main className="standalone-page"><div className="standalone-card"><span className="standalone-brand"><span className="brand-mark"><BrandLogo /></span><span className="brand-text">presen<span className="brand-highlight">CA</span></span></span><div className="standalone-art"><span>4</span><Church size={39} /><span>4</span></div><div className="eyebrow">PÁGINA NÃO ENCONTRADA</div><h1>Este caminho ainda não existe.</h1><p>A página pode ter sido movida ou o endereço pode estar incorreto. Vamos encontrar o caminho de volta.</p><div className="standalone-actions"><button className="button button-secondary" onClick={() => router.back()}><ArrowLeft size={14} />Voltar</button><a className="button button-primary" href="/"><Home size={14} />Ir para o início</a></div></div><div className="standalone-footer">Feito com cuidado para Cristo Alegria <span>·</span> PresenCA</div></main>; }

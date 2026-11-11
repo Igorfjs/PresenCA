@@ -4,8 +4,14 @@ const names = ["João Gonzaga", "Andrezza Palmeira", "Jaine Negreiros", "Igor Fe
 const cities = ["São Paulo", "Goiânia", "Belém"];
 const groups = ["Comunicação", "Eventos", "Lanchonete", "Música", "Acolhida"];
 const positions = ["Consagrado", "Aspirante", "Vocacionado", "Voluntário"] as const;
+const lastVisits = [
+  { date: "10/11/2026", event: "Encontro de Jovens" },
+  { date: "08/11/2026", event: "Missa da Comunidade" },
+  { date: "05/11/2026", event: "Grupo de Oração" },
+  { date: "01/11/2026", event: "Formação Consagrados" },
+];
 const avatar = (seed: string) => `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=f3e8d5,e8e9f5,d6ede8`;
-export const members: Member[] = names.map((name, i) => ({ id: i + 1, name, phone: `(11) 9${String(81342000 + i * 317).padStart(8, "0").slice(0, 4)}-${String(1000 + i * 43).slice(0, 4)}`, city: cities[i % cities.length], group: groups[i % groups.length], position: positions[i % positions.length], status: i === 12 || i === 31 ? "Inativo" : "Ativo", since: `${String((i % 27) + 1).padStart(2, "0")}/${String((i % 10) + 1).padStart(2, "0")}/${2021 + (i % 5)}`, email: `${name.toLowerCase().replaceAll(" ", ".").normalize("NFD").replace(/[\u0300-\u036f]/g, "")}@email.com`, avatar: avatar(name), attendance: 58 + ((i * 13) % 42) }));
+export const members: Member[] = names.map((name, i) => ({ id: i + 1, name, phone: `(11) 9${String(81342000 + i * 317).padStart(8, "0").slice(0, 4)}-${String(1000 + i * 43).slice(0, 4)}`, city: cities[i % cities.length], group: groups[i % groups.length], position: positions[i % positions.length], status: i === 12 || i === 31 ? "Inativo" : "Ativo", since: `${String((i % 27) + 1).padStart(2, "0")}/${String((i % 10) + 1).padStart(2, "0")}/${2021 + (i % 5)}`, email: `${name.toLowerCase().replaceAll(" ", ".").normalize("NFD").replace(/[\u0300-\u036f]/g, "")}@email.com`, avatar: avatar(name), attendance: 58 + ((i * 13) % 42), lastVisit: lastVisits[i % lastVisits.length] }));
 export const events: EventItem[] = [
   { id: 1, name: "Anjos", type: "Encontro", date: "2026-11-12", time: "19:30", location: "Tenda das Padroeiras", owner: "Mariana Costa", status: "Confirmado", attendees: 42 },
   { id: 2, name: "Missa em Comunidade", type: "Celebração", date: "2026-11-14", time: "18:00", location: "Paróquia Nsa. Aparecida e Santa Edwiges", owner: "Pe. Rubens", status: "Confirmado", attendees: 86 },

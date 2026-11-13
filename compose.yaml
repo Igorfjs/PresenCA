@@ -1,0 +1,63 @@
+name: presenca-development
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: presenca-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: presenca_development
+      POSTGRES_USER: presenca
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env and configure POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_development_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U presenca -d presenca_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      target: development
+    container_name: presenca-api-dev
+    restart: unless-stopped
+    env_file:
+      - ./apps/api/.env
+    environment:
+      DATABASE_URL: postgresql://presenca:${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD in .env}@db:5432/presenca_development?schema=public
+      WEB_ORIGIN: http://localhost:${WEB_PORT:-3001}
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./apps/api:/workspace
+      - api_development_node_modules:/workspace/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./apps/web
+      target: development
+    container_name: presenca-web-dev
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+    ports:
+      - "${WEB_PORT:-3001}:3000"
+    volumes:
+      - ./apps/web:/workspace
+      - web_development_node_modules:/workspace/node_modules
+      - web_development_next:/workspace/.next
+    depends_on:
+      - api
+
+volumes:
+  postgres_development_data:
+  api_development_node_modules:
+  web_development_node_modules:
+  web_development_next:

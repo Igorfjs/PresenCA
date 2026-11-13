@@ -17,7 +17,7 @@ Este documento consolida as regras observáveis no protótipo com as regras prop
 - **A implementar:** regra trazida como definição futura; não deve ser presumida como comportamento atual.
 - **Decisão pendente:** fontes descrevem regras diferentes ou falta uma definição de produto. Até a decisão, prevalece o comportamento implementado, sem inferir equivalências.
 
-O projeto é front-end demonstrativo. Não possui backend, banco de dados, autenticação, autorização ou armazenamento persistente. A palavra “deverá” nas regras **A implementar** descreve o produto desejado, não uma capacidade já disponível.
+O repositório agora contém uma base de API NestJS e um schema inicial Prisma/PostgreSQL, mas ainda não implementa operações de negócio, autenticação, autorização ou persistência das telas. O painel continua usando dados mockados. A palavra “deverá” nas regras **A implementar** descreve o produto desejado, não uma capacidade já disponível.
 
 ## 1. Objetivo
 
@@ -51,7 +51,7 @@ Definir como o PresenCA organiza eventos, séries recorrentes, pessoas, particip
 
 **Regra proposta — A implementar:** somente usuários autenticados poderão acessar o painel e cada ação deverá respeitar o perfil e a permissão associados ao usuário.
 
-**Estado atual:** `/login` não valida credenciais e redireciona para o painel. Não há middleware ou sessão, portanto não existe restrição técnica ao painel.
+**Estado atual:** `/login` não valida credenciais e redireciona para o painel. A API ainda não implementa autenticação, middleware ou sessão, portanto não existe restrição técnica ao painel.
 
 ## 3. Pessoas
 
@@ -181,7 +181,7 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 **Regras propostas — A implementar:** impedir eventos duplicados, cadastros duplicados, presenças duplicadas e inconsistência entre membro e participante.
 
-**Estado atual:** IDs locais são gerados para novos eventos e alguns visitantes; isso não garante unicidade global. O formulário de inclusão no evento evita duplicar uma seleção na interface, mas os mocks e a ausência de backend impedem garantir integridade geral. Não há regra de CPF nem validação transversal de membro versus visitante.
+**Estado atual:** IDs locais são gerados para novos eventos e alguns visitantes; isso não garante unicidade global. O formulário de inclusão no evento evita duplicar uma seleção na interface, mas os mocks e a ausência de endpoints de negócio impedem garantir integridade geral. O schema inicial prevê identificador documental opcional, mas não há regra de CPF nem validação transversal de membro versus visitante em execução.
 
 ## 10. Relatórios
 
@@ -193,7 +193,7 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 **Regra proposta — A implementar:** o sistema deve permanecer disponível durante os eventos e não perder registros caso haja falha temporária de conexão.
 
-**Estado atual:** não existe armazenamento offline, fila de sincronização ou API. Alterações em estado React podem se perder ao recarregar ou fechar a página. A disponibilidade e recuperação de dados dependem de uma futura arquitetura com persistência e sincronização.
+**Estado atual:** não existe armazenamento offline, fila de sincronização ou API de negócio integrada às telas. A API tem somente um health check nesta etapa. Alterações em estado React podem se perder ao recarregar ou fechar a página. A disponibilidade e recuperação de dados dependem da implementação de persistência e sincronização.
 
 ## 12. Regras gerais consolidadas
 

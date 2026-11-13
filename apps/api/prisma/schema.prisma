@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  ADMIN
+  ORGANIZER
+}
+
+enum PersonType {
+  MEMBER
+  VISITOR
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EventStatus {
+  CONFIRMED
+  UPCOMING
+  CANCELLED
+  COMPLETED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  JUSTIFIED
+}
+
+model Workspace {
+  id          String                @id @default(cuid())
+  name        String
+  description String?
+  slug        String                @unique
+  createdAt   DateTime              @default(now())
+  memberships WorkspaceMembership[]
+  people      Person[]
+  events      Event[]
+  series      RecurringSeries[]
+  auditLogs   AuditLog[]
+}
+
+model User {
+  id              String                @id @default(cuid())
+  name            String
+  email           String                @unique
+  passwordHash    String
+  active          Boolean               @default(true)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  memberships     WorkspaceMembership[]
+  responsibleFor  Event[]               @relation("EventResponsible")
+  recordedEntries Attendance[]          @relation("AttendanceRecorder")
+  auditLogs       AuditLog[]
+}
+
+model WorkspaceMembership {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole
+  createdAt   DateTime      @default(now())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+  @@index([userId, role])
+}
+
+model Person {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  type           PersonType
+  name           String
+  email          String?
+  phone          String?
+  city           String?
+  documentNumber String?
+  groupName      String?
+  position       String?
+  status         RecordStatus  @default(ACTIVE)
+  joinedAt       DateTime?
+  notes          String?
+  deletedAt      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id])
+  attendance     Attendance[]
+
+  @@unique([workspaceId, documentNumber])
+  @@index([workspaceId, type, status])
+  @@index([workspaceId, name])
+}
+
+model RecurringSeries {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  weekday     Int
+  time        String
+  location    String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  events      Event[]
+
+  @@index([workspaceId, active])
+}
+
+model Event {
+  id              String          @id @default(cuid())
+  workspaceId     String
+  seriesId        String?
+  responsibleId   String?
+  name            String
+  description     String?
+  startsAt        DateTime
+  location        String
+  category        String?
+  capacity        Int?
+  status          EventStatus     @default(CONFIRMED)
+  scheduleException Boolean       @default(false)
+  observations    String?
+  deletedAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id])
+  series          RecurringSeries? @relation(fields: [seriesId], references: [id])
+  responsible     User?           @relation("EventResponsible", fields: [responsibleId], references: [id])
+  attendance      Attendance[]
+
+  @@index([workspaceId, startsAt, status])
+  @@index([seriesId, startsAt])
+}
+
+model Attendance {
+  id           String           @id @default(cuid())
+  personId     String
+  eventId      String
+  recorderId   String?
+  status       AttendanceStatus
+  notes        String?
+  recordedAt   DateTime         @default(now())
+  person       Person           @relation(fields: [personId], references: [id])
+  event        Event            @relation(fields: [eventId], references: [id])
+  recorder     User?            @relation("AttendanceRecorder", fields: [recorderId], references: [id])
+
+  @@unique([personId, eventId])
+  @@index([eventId, status])
+  @@index([personId, recordedAt])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  actorId     String?
+  action      String
+  entityType  String
+  entityId    String
+  metadata    Json?
+  occurredAt  DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  actor       User?     @relation(fields: [actorId], references: [id])
+
+  @@index([workspaceId, occurredAt])
+  @@index([entityType, entityId])
+}

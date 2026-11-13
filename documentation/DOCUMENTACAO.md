@@ -4,7 +4,7 @@
 
 PresenCA é um protótipo front-end para organizar eventos, membros e visitantes da comunidade católica Cristo Alegria. A interface foi desenhada como um painel administrativo SaaS, com navegação lateral, tema escuro/claro, tabelas pesquisáveis, formulários, modais e telas responsivas.
 
-O projeto demonstra fluxos para administradores e organizadores, mas não possui backend, banco de dados ou autenticação real. Os dados vêm de arrays locais e as alterações principais são mantidas em estado React durante a sessão da página. Em geral, elas desaparecem ao recarregar. O formulário de login não valida credenciais e o formulário de recuperação apenas simula uma confirmação. Não há rota pública de auto cadastro: os cadastros são iniciados nas telas internas do painel.
+O painel demonstra fluxos para administradores e organizadores e continua usando arrays locais. O repositório possui uma base NestJS, um health check e um schema Prisma/PostgreSQL inicial, mas ainda não tem operações de negócio integradas, persistência das telas ou autenticação real. As alterações principais são mantidas em estado React durante a sessão e em geral desaparecem ao recarregar. O formulário de login não valida credenciais e o formulário de recuperação apenas simula uma confirmação. Não há rota pública de auto cadastro: os cadastros são iniciados nas telas internas do painel.
 
 Há interações realmente implementadas no navegador, como alternar telas, filtrar e pesquisar listas, criar ocorrências de eventos em estado local, alterar status e abrir drawers ou modais. Outras ações, como exportar, salvar algumas configurações, trocar a foto ou solicitar uma alteração de senha, mostram somente feedback visual.
 

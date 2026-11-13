@@ -1,0 +1,33 @@
+name: presenca-production
+
+services:
+  api:
+    build:
+      context: ./apps/api
+      target: production
+    image: presenca-api:production
+    restart: unless-stopped
+    env_file:
+      - ./apps/api/.env.production
+    environment:
+      NODE_ENV: production
+      API_PORT: 4000
+    ports:
+      - "${API_PORT:-4000}:4000"
+
+  web:
+    build:
+      context: ./apps/web
+      target: production
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Configure NEXT_PUBLIC_API_URL}
+    image: presenca-web:production
+    restart: unless-stopped
+    env_file:
+      - ./apps/web/.env.production
+    environment:
+      NODE_ENV: production
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - api

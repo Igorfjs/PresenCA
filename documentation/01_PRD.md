@@ -34,7 +34,7 @@ O PresenCA propõe centralizar a operação em um painel com busca, cadastros, d
 | Administrador(a) da comunidade | Organizar eventos, membros, equipe, configurações e relatórios. | Representado por perfil e ações de interface; autenticação e autorização não existem. |
 | Organizador(a) | Criar e acompanhar eventos e participantes. | Existe como registro com permissão na tabela, mas as permissões não são aplicadas. |
 | Membro | Participar de eventos e ter sua presença acompanhada. | Representado nos dados e na lista de participantes de um evento; não há conta de membro. |
-| Visitante/participante | Informar dados básicos e participar de encontros ou do grupo informativo. | Há cadastro local e uma rota pública demonstrativa; não há conta nem persistência real. |
+| Visitante/participante | Ser cadastrado pela equipe e participar de encontros ou do grupo informativo. | Cadastro interno demonstrativo; não há auto cadastro público nem persistência real. |
 
 Os rótulos de permissão são demonstrativos e não devem ser considerados um modelo de autorização implementado.
 

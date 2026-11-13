@@ -4,5 +4,9 @@ out/
 build/
 coverage/
 .env*
+!.env.example
+!.env.*.example
 *.tsbuildinfo
 npm-debug.log*
+apps/api/dist/
+postgres-data/

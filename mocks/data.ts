@@ -1,4 +1,4 @@
-import type { EventItem, Member, Organizer } from "@/types";
+import type { EventItem, Member, Organizer, RecurringEventTemplate } from "@/types";
 
 const names = ["João Gonzaga", "Andrezza Palmeira", "Jaine Negreiros", "Igor Felipe", "Ana Flávia", "Fernanda Santos", "Milena Apolinário", "Leon Rufino", "Giulia Maria", "Emily Alves", "Bárbara Vitória", "Endriu", "Felipe Almeida", "Mariana Lima", "Bruno Ferreira", "Isabela Rocha", "Matheus Gomes", "Sofia Nunes", "André Barbosa", "Valentina Ribeiro", "Gustavo Carvalho", "Helena Dias", "Leonardo Melo", "Laura Freitas", "Thiago Cardoso", "Manuela Moreira", "Daniel Correia", "Alice Monteiro", "Vinícius Mendes", "Cecília Araújo", "Samuel Fernandes", "Heloísa Teixeira", "Eduardo Batista", "Lívia Campos", "Henrique Vieira", "Antonella Reis", "Rodrigo Lopes", "Elisa Moraes", "Caio Pires", "Clara Cunha", "Murilo Fonseca", "Lorena Castro", "Otávio Azevedo", "Marina Tavares", "Enzo Dantas", "Yasmin Peixoto", "Breno Macedo", "Luiza Siqueira", "Davi Rezende", "Esther Farias"];
 const cities = ["São Paulo", "Goiânia", "Belém"];
@@ -12,14 +12,21 @@ const lastVisits = [
 ];
 const avatar = (seed: string) => `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=f3e8d5,e8e9f5,d6ede8`;
 export const members: Member[] = names.map((name, i) => ({ id: i + 1, name, phone: `(11) 9${String(81342000 + i * 317).padStart(8, "0").slice(0, 4)}-${String(1000 + i * 43).slice(0, 4)}`, city: cities[i % cities.length], group: groups[i % groups.length], position: positions[i % positions.length], status: i === 12 || i === 31 ? "Inativo" : "Ativo", since: `${String((i % 27) + 1).padStart(2, "0")}/${String((i % 10) + 1).padStart(2, "0")}/${2021 + (i % 5)}`, email: `${name.toLowerCase().replaceAll(" ", ".").normalize("NFD").replace(/[\u0300-\u036f]/g, "")}@email.com`, avatar: avatar(name), attendance: 58 + ((i * 13) % 42), lastVisit: lastVisits[i % lastVisits.length] }));
+export const recurringEventTemplates: RecurringEventTemplate[] = [
+  { id: "anjos", name: "Anjos", type: "Encontro", weekday: 4, time: "19:30", location: "Tenda das Padroeiras", owner: "Mariana Costa", capacity: 60, description: "Encontro semanal do grupo Anjos.", observations: "Acolhida a partir das 19h. Trazer Bíblia e garrafa de água." },
+  { id: "missa-comunidade", name: "Missa em Comunidade", type: "Celebração", weekday: 6, time: "18:00", location: "Paróquia Nsa. Aparecida e Santa Edwiges", owner: "Pe. Rubens", capacity: 120, description: "Celebração eucarística aberta à comunidade.", observations: "A equipe de acolhida chega 30 minutos antes." },
+  { id: "formacao-consagrados", name: "Formação Consagrados", type: "Formação", weekday: 2, time: "20:00", location: "Sala de encontros", owner: "João Pedro", capacity: 40, description: "Formação semanal para os consagrados.", observations: "Encontro na sala principal da Casa Sede." },
+  { id: "formacao-aspirantes", name: "Formação Aspirantes", type: "Formação", weekday: 0, time: "15:00", location: "Casa Sede", owner: "Jaine Negreiros", capacity: 30, description: "Encontro de formação e acompanhamento para os aspirantes.", observations: "Levar caderno e material de formação." },
+  { id: "formacao-vocacionados", name: "Formação Vocacionados", type: "Formação", weekday: 5, time: "19:30", location: "Casa Sede", owner: "Lucas Henrique", capacity: 45, description: "Encontro de formação e discernimento para os vocacionados.", observations: "Confirmar presença com a equipe de organização." },
+];
 export const events: EventItem[] = [
-  { id: 1, name: "Anjos", type: "Encontro", date: "2026-11-12", time: "19:30", location: "Tenda das Padroeiras", owner: "Mariana Costa", status: "Confirmado", attendees: 42 },
-  { id: 2, name: "Missa em Comunidade", type: "Celebração", date: "2026-11-14", time: "18:00", location: "Paróquia Nsa. Aparecida e Santa Edwiges", owner: "Pe. Rubens", status: "Confirmado", attendees: 86 },
-  { id: 3, name: "Formação Consagrados", type: "Formação", date: "2026-11-17", time: "20:00", location: "Sala de encontros", owner: "João Pedro", status: "Em breve", attendees: 28 },
+  { id: 1, name: "Anjos", type: "Encontro", date: "2026-11-12", time: "19:30", location: "Tenda das Padroeiras", owner: "Mariana Costa", status: "Confirmado", attendees: 42, seriesId: "anjos" },
+  { id: 2, name: "Missa em Comunidade", type: "Celebração", date: "2026-11-14", time: "18:00", location: "Paróquia Nsa. Aparecida e Santa Edwiges", owner: "Pe. Rubens", status: "Confirmado", attendees: 86, seriesId: "missa-comunidade" },
+  { id: 3, name: "Formação Consagrados", type: "Formação", date: "2026-11-17", time: "20:00", location: "Sala de encontros", owner: "João Pedro", status: "Em breve", attendees: 28, seriesId: "formacao-consagrados" },
   { id: 4, name: "Ação Solidária", type: "Ação social", date: "2026-11-20", time: "09:00", location: "Centro comunitário", owner: "Ana Paula", status: "Confirmado", attendees: 31 },
-  { id: 5, name: "Formação Aspirantes", type: "Formação", date: "2026-11-22", time: "15:00", location: "Casa Sede", owner: "Jaine Negreiros", status: "Em breve", attendees: 19 },
+  { id: 5, name: "Formação Aspirantes", type: "Formação", date: "2026-11-22", time: "15:00", location: "Casa Sede", owner: "Jaine Negreiros", status: "Em breve", attendees: 19, seriesId: "formacao-aspirantes" },
   { id: 6, name: "Confraternização", type: "Confraternização", date: "2026-11-25", time: "19:00", location: "Chácara Raio de Sol", owner: "Maria Clara", status: "Em breve", attendees: 54 },
-  { id: 7, name: "Formação Vocacionados", type: "Formação", date: "2026-11-27", time: "19:30", location: "Casa Sede", owner: "Lucas Henrique", status: "Em breve", attendees: 36 },
+  { id: 7, name: "Formação Vocacionados", type: "Formação", date: "2026-11-27", time: "19:30", location: "Casa Sede", owner: "Lucas Henrique", status: "Em breve", attendees: 36, seriesId: "formacao-vocacionados" },
   { id: 8, name: "Reunião de Alinhamento", type: "Celebração", date: "2026-12-05", time: "21:00", location: "Paróquia", owner: "Mariana Costa", status: "Em breve", attendees: 72 },
   { id: 9, name: "Retiro da comunidade", type: "Retiro", date: "2026-12-12", time: "08:00", location: "Chácara Raio de Sol", owner: "Ana Paula", status: "Em breve", attendees: 48 },
   { id: 10, name: "Natal solidário", type: "Ação social", date: "2026-12-19", time: "10:00", location: "Centro comunitário", owner: "João Pedro", status: "Em breve", attendees: 63 },

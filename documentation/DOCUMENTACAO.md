@@ -4,7 +4,7 @@
 
 PresenCA é um protótipo front-end para organizar eventos, membros e visitantes da comunidade católica Cristo Alegria. A interface foi desenhada como um painel administrativo SaaS, com navegação lateral, tema escuro/claro, tabelas pesquisáveis, formulários, modais e telas responsivas.
 
-O projeto demonstra fluxos para administradores e organizadores, mas não possui backend, banco de dados ou autenticação real. Os dados vêm de arrays locais e as alterações principais são mantidas em estado React durante a sessão da página. Em geral, elas desaparecem ao recarregar. O formulário de login não valida credenciais; os formulários de recuperação e cadastro público também apenas simulam uma confirmação.
+O projeto demonstra fluxos para administradores e organizadores, mas não possui backend, banco de dados ou autenticação real. Os dados vêm de arrays locais e as alterações principais são mantidas em estado React durante a sessão da página. Em geral, elas desaparecem ao recarregar. O formulário de login não valida credenciais e o formulário de recuperação apenas simula uma confirmação. Não há rota pública de auto cadastro: os cadastros são iniciados nas telas internas do painel.
 
 Há interações realmente implementadas no navegador, como alternar telas, filtrar e pesquisar listas, criar ocorrências de eventos em estado local, alterar status e abrir drawers ou modais. Outras ações, como exportar, salvar algumas configurações, trocar a foto ou solicitar uma alteração de senha, mostram somente feedback visual.
 
@@ -70,7 +70,7 @@ Arquivos de configuração relevantes na raiz: `package.json`, `package-lock.jso
 
 ### Rotas do App Router
 
-As pastas dentro de `app/` definem rotas próprias, como `/login`, `/participar`, `/recuperar-senha`, `/acesso-negado` e `/manutencao`. `app/not-found.tsx` fornece a tela para caminhos inexistentes.
+As pastas dentro de `app/` definem rotas próprias, como `/login`, `/recuperar-senha`, `/acesso-negado` e `/manutencao`. `app/not-found.tsx` fornece a tela para caminhos inexistentes.
 
 ### Telas internas do painel
 
@@ -108,7 +108,7 @@ Selecionar uma linha abre um drawer com dados pessoais e de contato, cidade, gru
 
 ### Participantes
 
-A lista contém visitantes/participantes, sem incluir membros. Há busca por nome, telefone, cidade ou evento e colunas de contato, cidade e última visita. O botão Novo participante abre um cadastro local de visitante; participantes cadastrados por esse fluxo aparecem na lista durante a sessão.
+A lista contém visitantes/participantes, sem incluir membros. Há busca por nome, telefone, cidade ou evento e colunas de contato, cidade e última visita. O botão Novo participante abre um cadastro local de visitante, disponível no painel interno; participantes cadastrados por esse fluxo aparecem na lista durante a sessão. Não existe auto cadastro público.
 
 O card “Convide para o News” contém o botão Abrir QR Code. Ele abre um modal com um QR que codifica `NEWS_GROUP_INVITE_URL`, constante compartilhada de `lib/constants.ts`. A imagem é solicitada ao serviço externo `api.qrserver.com`; portanto, a exibição do QR depende de conexão com esse serviço. O QR é estático e o PresenCA não aplica expiração; ele deixa de funcionar se o link for redefinido ou invalidado no WhatsApp. A lista de participantes não representa membros.
 
@@ -140,7 +140,6 @@ Tem abas de Dados pessoais, Segurança, Preferências e Notificações. Mostra d
 | --- | --- |
 | `/login` | Formulário de login e senha, com opção visual de mostrar/ocultar senha. Não valida credenciais nem cria sessão; o envio encaminha para `/`. |
 | `/recuperar-senha` | Solicita e-mail e mostra uma confirmação simulada. Nenhum e-mail é enviado. |
-| `/participar` | Formulário público simples de nome, telefone, e-mail e cidade. Após salvar, mostra confirmação; não persiste o cadastro no estado da lista administrativa. |
 | `/acesso-negado` | Tela informativa com atalhos para o início e solicitação de acesso por e-mail. |
 | `/manutencao` | Aviso de manutenção e link para tentar novamente no início. |
 | Caminho inexistente | Página 404 personalizada em `app/not-found.tsx`, com ação de voltar e ir ao início. |

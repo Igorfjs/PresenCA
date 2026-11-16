@@ -114,7 +114,7 @@ O card “Convide para o News” contém o botão Abrir QR Code. Ele abre um mod
 
 ### Organizadores
 
-A tabela exibe nome, permissão, e-mail, telefone e status com dados mockados. Adicionar organizador abre um formulário e atualiza o feedback da interface, mas os dados não são gravados em uma API. O menu de cada linha apenas informa que o organizador está sendo gerenciado; não implementa edição ou remoção real.
+A tabela exibe nome, permissão, e-mail, telefone e status com dados mockados. Adicionar organizador abre um formulário para escolher um membro ainda sem acesso e atribuir o papel de Administrador ou Organizador. A associação e o novo registro são mantidos somente no estado local durante a sessão, sem gravação na API. O menu de cada linha apenas informa o papel atual; edição ou remoção ainda não estão implementadas.
 
 ### Relatórios
 

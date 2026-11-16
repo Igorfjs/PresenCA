@@ -44,11 +44,11 @@ export const eventDetails: Record<number, { description: string; capacity: numbe
   10: { description: "Celebração do Natal com partilha, atividades para as famílias e entrega de doações.", capacity: 90, observations: "Aberto a toda a comunidade. Traga um alimento não perecível." },
 };
 export const organizers: Organizer[] = [
-  { id: 1, name: "Igor Felipe", permission: "Administradora", email: "mariana@cristoalegria.org", phone: "(11) 98123-4567", status: "Ativo" },
-  { id: 2, name: "Andrezza Palmeira", permission: "Organizador", email: "joao@cristoalegria.org", phone: "(11) 98456-7890", status: "Ativo" },
-  { id: 3, name: "João Gonzaga", permission: "Organizadora", email: "ana@cristoalegria.org", phone: "(11) 98765-4321", status: "Ativo" },
-  { id: 4, name: "Jaine Negreiros", permission: "Organizadora", email: "carlos@cristoalegria.org", phone: "(11) 98901-2345", status: "Ativo" },
-  { id: 5, name: "Milena Apolinário", permission: "Visualização", email: "maria@cristoalegria.org", phone: "(11) 98234-5678", status: "Pendente" },
+  { id: 1, memberId: 4, name: members[3].name, permission: "Administrador", email: members[3].email, phone: members[3].phone, status: "Ativo" },
+  { id: 2, memberId: 2, name: members[1].name, permission: "Organizador", email: members[1].email, phone: members[1].phone, status: "Ativo" },
+  { id: 3, memberId: 1, name: members[0].name, permission: "Organizador", email: members[0].email, phone: members[0].phone, status: "Ativo" },
+  { id: 4, memberId: 3, name: members[2].name, permission: "Organizador", email: members[2].email, phone: members[2].phone, status: "Ativo" },
+  { id: 5, memberId: 7, name: members[6].name, permission: "Organizador", email: members[6].email, phone: members[6].phone, status: "Pendente" },
 ];
 export const attendance = Array.from({ length: 200 }, (_, i) => ({ id: i + 1, member: members[i % members.length], event: events[i % 10], status: i % 7 === 0 ? "Ausente" : i % 13 === 0 ? "Justificado" : "Presente" }));
 export const monthly = [{ name: "Jun", presenças: 148 }, { name: "Jul", presenças: 176 }, { name: "Ago", presenças: 162 }, { name: "Set", presenças: 213 }, { name: "Out", presenças: 198 }, { name: "Nov", presenças: 246 }];

@@ -9,7 +9,7 @@ import { attendance, eventAttendance, eventDetails, events, members, monthly, or
 import { BrandLogo } from "@/components/brand-logo";
 import { formatDate } from "@/lib/utils";
 import { NEWS_GROUP_INVITE_URL } from "@/lib/constants";
-import type { EventItem, Member, RecurringEventTemplate } from "@/types";
+import type { EventItem, Member, Organizer, RecurringEventTemplate } from "@/types";
 
 import { Page, navigation, avatar, weekdayNames, localDateValue, nextDateForWeekday, IconButton, Badge, Avatar, SectionTitle, CardHead, Workspace, workspaces, registeredParticipants, WorkspaceSelector, EmptyState } from '@/features/shared';
 import { DashboardPage } from '@/features/dashboard';
@@ -36,6 +36,7 @@ export default function PresencaApp() {
   const [eventList, setEventList] = useState(events);
   const [recurringTemplates, setRecurringTemplates] = useState(recurringEventTemplates);
   const [memberList] = useState(members);
+  const [organizerList, setOrganizerList] = useState(organizers);
   const [participantList, setParticipantList] = useState(registeredParticipants);
   const [eventSearch, setEventSearch] = useState("");
 
@@ -43,7 +44,40 @@ export default function PresencaApp() {
   useEffect(() => { if (notice) { const t = window.setTimeout(() => setNotice(""), 2800); return () => window.clearTimeout(t); } }, [notice]);
 
   const go = (next: Page) => { setPage(next); setMobileOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const submit = (e: React.FormEvent<HTMLFormElement>, label: string) => { e.preventDefault(); const form = new FormData(e.currentTarget); if (label === "Série") { const name = String(form.get("seriesName") || "Nova série").trim(); const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "serie"; const templateId = `${slug}-${Date.now().toString(36)}`; const weekday = Number(form.get("weekday")); const template = { id: templateId, name, type: String(form.get("seriesType") || "Encontro"), weekday, time: String(form.get("time") || "19:30"), location: String(form.get("location") || ""), owner: String(form.get("owner") || organizers[0].name), capacity: Number(form.get("capacity")) || 0, description: String(form.get("seriesDescription") || ""), observations: String(form.get("seriesObservations") || "") }; setRecurringTemplates((items) => [...items, template]); const firstEvent: EventItem = { id: Math.max(...eventList.map((item) => item.id), 0) + 1, name: template.name, type: template.type, date: nextDateForWeekday(template.weekday), time: template.time, location: template.location, owner: template.owner, capacity: template.capacity, description: template.description, observations: template.observations, status: "Confirmado", attendees: 0, seriesId: template.id }; setEventList((items) => [...items, firstEvent]); setModal(null); setNotice(`Série ${name} criada e adicionada à lista de eventos`); return; } if (label === "Cadastro") { const name = String(form.get("name") || "").trim(); const participant: Member = { id: Math.max(1000, ...participantList.map((item) => item.id)) + 1, name, phone: String(form.get("phone") || ""), email: String(form.get("email") || ""), city: String(form.get("city") || ""), group: "Participante", position: "Voluntário", status: "Ativo", since: new Date().toLocaleDateString("pt-BR"), avatar: avatar(name), attendance: 0, lastVisit: null }; setParticipantList((items) => [...items, participant]); } if (label === "Evento") { const seriesId = String(form.get("seriesId") || "") || undefined; const series = recurringTemplates.find((item) => item.id === seriesId); const selectedDate = String(form.get("date") || ""); const scheduleException = form.get("scheduleException") === "on"; if (series && new Date(`${selectedDate}T12:00:00`).getDay() !== series.weekday && !scheduleException) { setNotice(`Este evento acontece toda ${weekdayNames[series.weekday]}. Selecione uma data nesse dia.`); return; } const newEvent: EventItem = { id: Math.max(...eventList.map((item) => item.id), 0) + 1, name: String(form.get("name") || "Novo evento"), description: String(form.get("description") || ""), date: selectedDate, time: String(form.get("time") || ""), location: String(form.get("location") || ""), type: String(form.get("type") || "Encontro"), owner: String(form.get("owner") || organizers[0].name), capacity: Number(form.get("capacity")) || undefined, observations: String(form.get("observations") || ""), status: "Confirmado", attendees: 0, seriesId, scheduleException: scheduleException || undefined }; setEventList((items) => [...items, newEvent]); } setModal(null); setNotice(label === "Evento" ? "Evento criado com sucesso" : `${label} salvo com sucesso`); };
+  const submitOther = (e: React.FormEvent<HTMLFormElement>, label: string) => { e.preventDefault(); const form = new FormData(e.currentTarget); if (label === "Série") { const name = String(form.get("seriesName") || "Nova série").trim(); const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "serie"; const templateId = `${slug}-${Date.now().toString(36)}`; const weekday = Number(form.get("weekday")); const template = { id: templateId, name, type: String(form.get("seriesType") || "Encontro"), weekday, time: String(form.get("time") || "19:30"), location: String(form.get("location") || ""), owner: String(form.get("owner") || organizerList[0]?.name || ""), capacity: Number(form.get("capacity")) || 0, description: String(form.get("seriesDescription") || ""), observations: String(form.get("seriesObservations") || "") }; setRecurringTemplates((items) => [...items, template]); const firstEvent: EventItem = { id: Math.max(...eventList.map((item) => item.id), 0) + 1, name: template.name, type: template.type, date: nextDateForWeekday(template.weekday), time: template.time, location: template.location, owner: template.owner, capacity: template.capacity, description: template.description, observations: template.observations, status: "Confirmado", attendees: 0, seriesId: template.id }; setEventList((items) => [...items, firstEvent]); setModal(null); setNotice(`Série ${name} criada e adicionada à lista de eventos`); return; } if (label === "Cadastro") { const name = String(form.get("name") || "").trim(); const participant: Member = { id: Math.max(1000, ...participantList.map((item) => item.id)) + 1, name, phone: String(form.get("phone") || ""), email: String(form.get("email") || ""), city: String(form.get("city") || ""), group: "Participante", position: "Voluntário", status: "Ativo", since: new Date().toLocaleDateString("pt-BR"), avatar: avatar(name), attendance: 0, lastVisit: null }; setParticipantList((items) => [...items, participant]); } if (label === "Evento") { const seriesId = String(form.get("seriesId") || "") || undefined; const series = recurringTemplates.find((item) => item.id === seriesId); const selectedDate = String(form.get("date") || ""); const scheduleException = form.get("scheduleException") === "on"; if (series && new Date(`${selectedDate}T12:00:00`).getDay() !== series.weekday && !scheduleException) { setNotice(`Este evento acontece toda ${weekdayNames[series.weekday]}. Selecione uma data nesse dia.`); return; } const newEvent: EventItem = { id: Math.max(...eventList.map((item) => item.id), 0) + 1, name: String(form.get("name") || "Novo evento"), description: String(form.get("description") || ""), date: selectedDate, time: String(form.get("time") || ""), location: String(form.get("location") || ""), type: String(form.get("type") || "Encontro"), owner: String(form.get("owner") || organizerList[0]?.name || ""), capacity: Number(form.get("capacity")) || undefined, observations: String(form.get("observations") || ""), status: "Confirmado", attendees: 0, seriesId, scheduleException: scheduleException || undefined }; setEventList((items) => [...items, newEvent]); } setModal(null); setNotice(label === "Evento" ? "Evento criado com sucesso" : `${label} salvo com sucesso`); };
+  const submit = (event: React.FormEvent<HTMLFormElement>, label: string) => {
+    if (label !== "Organizador") {
+      submitOther(event, label);
+      return;
+    }
+
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const memberId = Number(form.get("memberId"));
+    const member = memberList.find((item) => item.id === memberId);
+
+    if (!member) {
+      setNotice("Selecione um membro cadastrado para conceder acesso.");
+      return;
+    }
+    if (organizerList.some((item) => item.memberId === member.id)) {
+      setNotice(`${member.name} já possui acesso ao sistema.`);
+      return;
+    }
+
+    const organizer: Organizer = {
+      id: Math.max(0, ...organizerList.map((item) => item.id)) + 1,
+      memberId: member.id,
+      name: member.name,
+      permission: String(form.get("permission") || "Organizador") as Organizer["permission"],
+      email: member.email,
+      phone: member.phone,
+      status: "Ativo",
+    };
+    setOrganizerList((items) => [...items, organizer]);
+    setModal(null);
+    setNotice(`Acesso de ${member.name} concedido como ${organizer.permission}.`);
+  };
   const filteredMembers = useMemo(() => memberList.filter((m) => `${m.name} ${m.phone} ${m.group} ${m.city}`.toLowerCase().includes(query.toLowerCase())), [memberList, query]);
   const filteredEvents = eventList.filter((ev) => `${ev.name} ${ev.type} ${ev.location}`.toLowerCase().includes(eventSearch.toLowerCase()));
 
@@ -52,7 +86,7 @@ export default function PresencaApp() {
       case "Eventos": return <EventsPage eventList={filteredEvents} participants={participantList} onParticipantCreated={(person) => setParticipantList((items) => items.some((item) => item.id === person.id || (!!person.email && item.email === person.email)) ? items : [...items, person])} eventSearch={eventSearch} setEventSearch={setEventSearch} onNew={() => setModal("event")} onNotice={setNotice} onEventStatusChange={(id, status) => setEventList((items) => items.map((event) => event.id === id ? { ...event, status } : event))} onAttendeeAdded={(id) => setEventList((items) => items.map((event) => event.id === id ? { ...event, attendees: event.attendees + 1 } : event))} onDelete={(id) => setEventList((items) => items.filter((event) => event.id !== id))} onDuplicate={(event) => { setEventList((items) => [...items, { ...event, id: Math.max(...items.map((item) => item.id), 0) + 1, name: `${event.name} (cópia)`, status: "Em breve" }]); setNotice("Evento duplicado com sucesso"); }} />;
       case "Membros": return <MembersPage rows={filteredMembers} query={query} setQuery={setQuery} onSelect={setMember} onNew={() => setModal("member")} />;
       case "Participantes": return <ParticipantsPage participants={participantList} onNew={() => setModal("participant")} />;
-      case "Organizadores": return <OrganizersPage onNew={() => setModal("organizer")} onNotice={setNotice} />;
+      case "Organizadores": return <OrganizersPage organizers={organizerList} members={memberList} onNew={() => setModal("organizer")} onNotice={setNotice} />;
       case "Relatórios": return <ReportsPage eventList={eventList} recurringTemplates={recurringTemplates} onNotice={setNotice} />;
       case "Configurações": return <SettingsPage onNotice={setNotice} dark={dark} setDark={setDark} />;
       case "Meu perfil": return <ProfilePage onNotice={setNotice} />;
@@ -75,7 +109,7 @@ export default function PresencaApp() {
       <div className="page-content"><AnimatePresence mode="wait"><motion.div key={page} initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.2 }}>{renderPage()}</motion.div></AnimatePresence><footer className="page-footer"><span>Coloca no feedback!! <Heart size={12} fill="currentColor" /> - Comunidade Católica Cristo Alegria. </span><span>PresenCA <b>·</b> v1.0.0</span></footer></div></main>
     <AnimatePresence>{searchOpen && <CommandPalette onClose={() => setSearchOpen(false)} onGo={(p) => { go(p); setSearchOpen(false); }} />}</AnimatePresence>
     <AnimatePresence>{member && <MemberDrawer member={member} onClose={() => setMember(null)} />}</AnimatePresence>
-    <AnimatePresence>{modal && <FormModal type={modal} recurringTemplates={recurringTemplates} onClose={() => setModal(null)} onSubmit={submit} />}</AnimatePresence>
+    <AnimatePresence>{modal && <FormModal type={modal} recurringTemplates={recurringTemplates} members={memberList} organizerList={organizerList} onClose={() => setModal(null)} onSubmit={submit} />}</AnimatePresence>
     <AnimatePresence>{notice && <motion.div className="toast" initial={{ opacity: 0, y: 15, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }}><span className="toast-check"><Check size={15} /></span>{notice}<button onClick={() => setNotice("")} aria-label="Fechar"><X size={15} /></button></motion.div>}</AnimatePresence>
   </div>;
 }

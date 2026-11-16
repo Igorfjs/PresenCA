@@ -32,7 +32,7 @@ O PresenCA propõe centralizar a operação em um painel com busca, cadastros, d
 | Perfil | Necessidade | Situação no protótipo |
 | --- | --- | --- |
 | Administrador(a) da comunidade | Organizar eventos, membros, equipe, configurações e relatórios. | Representado por perfil e ações de interface; autenticação e autorização não existem. |
-| Organizador(a) | Criar e acompanhar eventos e participantes. | Existe como registro com permissão na tabela, mas as permissões não são aplicadas. |
+| Organizador(a) | Criar e acompanhar eventos e participantes. | Deve estar vinculado a um membro; acesso e papel ainda são demonstrativos e não são aplicados pela API. |
 | Membro | Participar de eventos e ter sua presença acompanhada. | Representado nos dados e na lista de participantes de um evento; não há conta de membro. |
 | Visitante/participante | Ser cadastrado pela equipe e participar de encontros ou do grupo informativo. | Cadastro interno demonstrativo; não há auto cadastro público nem persistência real. |
 
@@ -117,7 +117,7 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 | RF-04 | Criar séries recorrentes com configurações padrão de dia da semana, hora, local, categoria, responsável, capacidade e descrição. | Implementado em estado local; salva o template e a primeira ocorrência, não agenda as seguintes. |
 | RF-05 | Criar uma ocorrência baseada em série preenchendo os padrões e permitindo ajustes daquela ocorrência. | Implementado em estado local. |
 | RF-06 | Permitir exceção de data em ocorrência recorrente mantendo o vínculo à série e o dia padrão intacto. | Implementado pelo campo `scheduleException`. |
-| RF-07 | Alterar o status do evento para Confirmado, Em breve ou Cancelado. | Implementado em estado local na tela de detalhes. |
+| RF-07 | Usar os status Confirmado, Agendado, Em andamento, Encerrado e Cancelado. Evento encerrado bloqueia alteração de presença. | Protótipo ainda usa Confirmado, Em breve e Cancelado; precisa ser atualizado antes da integração. |
 | RF-08 | Excluir evento com confirmação e duplicar uma ocorrência. | Implementado em estado local. |
 | RF-09 | Exibir detalhes do evento e participantes inscritos. | Implementado com dados locais/mockados. |
 | RF-10 | Adicionar membro ou visitante conhecido a um evento e registrar novo visitante durante o fluxo. | Implementado em estado local. |
@@ -126,11 +126,16 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 | RF-13 | Exibir dados e última visita de membro em drawer de perfil. | Implementado; parte das atividades e estatísticas é ilustrativa. |
 | RF-14 | Listar somente visitantes na tela Participantes, com pesquisa e última visita. | Implementado. |
 | RF-15 | Exibir QR Code do grupo informativo News apontando para o convite configurado. | Implementado por imagem de QR servida externamente. |
-| RF-16 | Listar e cadastrar organizadores. | Lista mockada; envio do formulário não atualiza uma base persistente. |
+| RF-16 | Listar organizadores e conceder acesso a membros já cadastrados. | A tela permite selecionar um membro não associado e atribuir um dos papéis, mas a alteração permanece apenas no estado local. |
 | RF-17 | Filtrar relatórios por série/ocorrência e por dia, mês, semestre, ano ou desde o início. | Implementado com os dados locais. |
 | RF-18 | Excluir eventos cancelados dos relatórios. | Implementado para cartões, gráfico, tabela e seleção de ocorrências. |
 | RF-19 | Alternar o tema claro/escuro do painel. | Alternância visual durante a sessão. |
 | RF-20 | Pesquisar páginas/ações por paleta de comandos. | Implementado; atalho `Ctrl+K` ou `⌘K`, quando confirmado no código. |
+| RF-21 | Exigir data de nascimento em cadastros de membros e participantes. | A implementar; formulários atuais não coletam esse dado. |
+| RF-22 | Atribuir missão automaticamente pelo workspace ativo ao cadastrar membro; permitir que administradores alterem a missão. | A implementar. A lista padrão deve mostrar membros da missão do workspace. |
+| RF-23 | Permitir que uma pessoa tenha papel de acesso diferente em cada workspace. Administradores e organizadores devem estar vinculados a membros existentes. | A implementar na autenticação e autorização da API. |
+| RF-24 | Disponibilizar à equipe um diretório global de membros, pesquisável e filtrável por missão. | A implementar; o seletor de workspace atual não filtra dados. |
+| RF-25 | Não exibir status na aba de organizadores. | A implementar na interface e no modelo persistente. |
 
 ## 9. Regras de negócio atuais
 
@@ -143,7 +148,7 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 - Ao criar uma ocorrência de série, a data precisa respeitar o dia padrão, a menos que seja marcada a opção **Alterar data apenas desta ocorrência**.
 - Se marcada, a ocorrência recebe `scheduleException: true`, pode acontecer em outro dia, permanece na série e aparece identificada como exceção nos detalhes e relatórios.
 - Editar os valores de uma ocorrência não atualiza os padrões do template.
-- Status de evento disponível na interface: Confirmado, Em breve e Cancelado.
+- Status finais acordados: Confirmado, Agendado, Em andamento, Encerrado e Cancelado. A interface atual ainda precisa ser normalizada.
 - Eventos Cancelados não entram nos resultados dos relatórios.
 
 ### 9.2 Participação e status de presença
@@ -157,10 +162,23 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 ### 9.3 Membros e visitantes
 
 - Membro tem posição entre Consagrado, Aspirante, Vocacionado e Voluntário, além de grupo/ministério e estado Ativo/Inativo.
+- Membro tem uma missão atual (Goiânia, Belém, São Paulo ou Membros externos), atribuída pelo workspace no cadastro; administrador pode alterá-la.
+- Membros e participantes terão data de nascimento obrigatória.
 - Visitantes ficam separados da lista de membros na tela Participantes.
 - O campo Última visita contém data e nome do evento ou ausência de visita registrada.
 
-### 9.4 QR Code do grupo News
+### 9.4 Workspaces e permissões
+
+- Pessoa é um registro central e pode ter relações de acesso em mais de um workspace.
+- Administrador e Organizador são papéis associados por workspace. Ser administrador em todas as missões significa possuir esse papel em cada workspace; não haverá superadministrador global inicialmente.
+- Todo usuário com papel de Administrador ou Organizador deve estar vinculado a um membro existente.
+- A missão determina a lista padrão de membros; o diretório de equipe pode pesquisar e filtrar membros de todas as missões.
+- Cristo Alegria Brasil corresponde à missão Membros externos.
+- Todos os workspaces usam o fuso `America/Sao_Paulo`.
+- A aba Organizadores não possui status.
+- Somente administradores podem excluir registros. Ao excluir uma pessoa logicamente, suas presenças continuam compondo os totais históricos, mas sua identidade fica oculta nos relatórios.
+
+### 9.5 QR Code do grupo News
 
 - O link do grupo está centralizado em `lib/constants.ts`, na constante `NEWS_GROUP_INVITE_URL`.
 - A tela Participantes e Configurações usam o mesmo link.
@@ -184,10 +202,11 @@ Os indicadores atuais mostram quantidade de ocorrências, inscritos acumulados e
 
 | Entidade | Campos relevantes no protótipo |
 | --- | --- |
-| Membro/participante | ID, nome, data de nascimento, telefone, e-mail, cidade, grupo, posição, status, ingresso, avatar, percentual de presença e última visita. Participantes usam o mesmo tipo `Member`, distinguindo-se pelo grupo e faixa de IDs na implementação atual. |
+| Pessoa | ID interno, nome completo, tipo, data de nascimento, telefone, e-mail e cidade. Membro ainda tem missão, grupo, posição, status e data de ingresso. |
 | Evento/ocorrência | ID, nome, tipo, data, hora, local, responsável, status, inscritos, descrição, capacidade, observações, `seriesId` e `scheduleException`. |
 | Série recorrente | ID, nome, categoria, dia da semana, hora, local, responsável, capacidade, descrição e observações. |
-| Organizador | ID, nome, permissão, e-mail, telefone e status. |
+| Usuário e papel por workspace | Conta de autenticação ligada a uma pessoa e papéis de Administrador/Organizador por workspace. |
+| Organizador | Associação de usuário e membro existente a um workspace e um papel de acesso, sem status próprio. |
 | Registro de participação | ID, membro/participante, evento e status local. Visitantes podem aparecer sem status aplicável. |
 
 Os dados de demonstração incluem aproximadamente 50 membros, 10 eventos, 5 séries recorrentes, 5 organizadores e 200 registros de presença em `mocks/data.ts`. Os participantes iniciais são definidos em `app/page.tsx`. Indicadores e gráficos não devem ser tratados como métricas operacionais atuais.
@@ -231,8 +250,8 @@ Antes de produção, definir e validar com a comunidade:
 2. Como editar ou cancelar uma série inteira versus uma única ocorrência.
 3. Se uma exceção precisa de justificativa, histórico ou aprovação.
 4. Se a troca de data deve notificar membros e visitantes, e por quais canais.
-5. Quais permissões existem de fato e o que cada papel pode ver ou alterar.
-6. Quais dados pessoais são obrigatórios, por quanto tempo serão guardados e quem pode acessá-los.
+5. Quais transições entre status de evento serão permitidas.
+6. Quais dados pessoais são obrigatórios além do aniversário, por quanto tempo serão guardados e quem pode acessá-los.
 7. Se visitantes precisam de cadastro único e como evitar duplicidades.
 8. Como serão calculados presença, ausência, justificativa, inscritos e médias nos relatórios.
 9. Quem pode redefinir o convite News e como atualizar o QR após uma redefinição.

@@ -60,7 +60,7 @@ Copy-Item apps/api/.env.example apps/api/.env
 docker compose up --build
 ```
 
-A interface fica em `http://localhost:3001` por padrão, a API em `http://localhost:4000/api/v1` e o health check em `http://localhost:4000/api/v1/health`. A porta pública da interface pode ser alterada por `WEB_PORT` no `.env`. O PostgreSQL local usa a porta `5432` e grava somente no volume `postgres_development_data`.
+A interface fica em `http://localhost:3001` por padrão, a API em `http://localhost:4000/api/v1` e o health check em `http://localhost:4000/api/v1/health`. A porta pública da interface pode ser alterada por `WEB_PORT` no `.env`. O Compose habilita polling de arquivos para que alterações feitas no Windows sejam detectadas pelos processos de desenvolvimento. O PostgreSQL local usa a porta `5432` e grava somente no volume `postgres_development_data`.
 
 Para criar a primeira migração no banco de desenvolvimento:
 
@@ -129,4 +129,5 @@ O Compose local oferece credenciais exclusivas para o container de desenvolvimen
 
 - [PRD](documentation/01_PRD.md)
 - [Regras de negócio](documentation/02_Regras_de_Negocio.md)
+- [Workflow de backend e banco de dados](documentation/03_Workflow_Backend_e_Banco_de_Dados.md)
 - [Documentação existente](documentation/DOCUMENTACAO.md)

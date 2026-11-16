@@ -66,12 +66,16 @@ model WorkspaceMembership {
   id          String        @id @default(cuid())
   workspaceId String
   userId      String
+  /// Must reference a Person when role is ORGANIZER; enforce this in the service layer.
+  personId    String?
   role        WorkspaceRole
   createdAt   DateTime      @default(now())
   workspace   Workspace     @relation(fields: [workspaceId], references: [id])
   user        User          @relation(fields: [userId], references: [id])
+  person      Person?       @relation(fields: [personId], references: [id])
 
   @@unique([workspaceId, userId])
+  @@unique([workspaceId, personId])
   @@index([userId, role])
 }
 
@@ -94,6 +98,7 @@ model Person {
   updatedAt      DateTime      @updatedAt
   workspace      Workspace     @relation(fields: [workspaceId], references: [id])
   attendance     Attendance[]
+  memberships    WorkspaceMembership[]
 
   @@unique([workspaceId, documentNumber])
   @@index([workspaceId, type, status])

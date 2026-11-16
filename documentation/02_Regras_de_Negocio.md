@@ -35,7 +35,7 @@ Definir como o PresenCA organiza eventos, séries recorrentes, pessoas, particip
 - configurar o sistema e alterar permissões;
 - excluir registros conforme a política de exclusão lógica definida neste documento.
 
-**Estado atual — Parcial / demonstrativo:** o painel contém formulários e telas destinadas à equipe. Não há login real, cadastro efetivo de permissões nem verificação de perfil. O formulário de participante altera uma lista React local; os formulários de membro e organizador exibem feedback, mas não adicionam registros às listas atuais.
+**Estado atual — Parcial / demonstrativo:** o painel contém formulários e telas destinadas à equipe. Não há login real, verificação de perfil ou persistência. O formulário de participante altera uma lista React local; a tela de organizadores permite vincular um membro a um dos dois papéis, mas essa alteração existe somente no estado da sessão.
 
 ### 2.2 Organizador
 
@@ -45,13 +45,35 @@ Definir como o PresenCA organiza eventos, séries recorrentes, pessoas, particip
 - alterar configurações do sistema;
 - alterar permissões.
 
-**Estado atual — Parcial / demonstrativo:** organizadores aparecem em uma tabela com permissão, mas os valores não protegem telas nem controlam ações. A tela de acesso negado também não verifica o perfil autenticado.
+**Regra adicional:** todo organizador deve corresponder a um membro já cadastrado. A concessão de acesso seleciona esse membro; não cria uma segunda pessoa. Um membro pode estar vinculado a apenas uma conta/papel de acesso por workspace.
+
+**Estado atual — Parcial / demonstrativo:** os organizadores mockados estão vinculados a membros por `memberId`. Ao adicionar, a interface oferece apenas membros ainda sem acesso e associa os dados da pessoa ao registro local. Os papéis disponíveis são Administrador e Organizador. A tela de acesso negado não verifica o perfil autenticado e a permissão não protege telas nem controla ações.
 
 ### 2.3 Autenticação e acesso
 
-**Regra proposta — A implementar:** somente usuários autenticados poderão acessar o painel e cada ação deverá respeitar o perfil e a permissão associados ao usuário.
+**Regra proposta — A implementar:** somente usuários autenticados poderão acessar o painel e cada ação deverá respeitar o perfil e a permissão associados ao usuário. Somente um administrador poderá alterar os papéis de acesso de outros usuários.
 
-**Estado atual:** `/login` não valida credenciais e redireciona para o painel. A API ainda não implementa autenticação, middleware ou sessão, portanto não existe restrição técnica ao painel.
+**Estado atual:** `/login` não valida credenciais e redireciona para o painel. A API ainda não implementa autenticação, middleware ou sessão, portanto não existe restrição técnica ao painel. A permissão atribuída na inclusão não pode ser alterada depois pela interface; a ação contextual apenas exibe o papel atual.
+
+### 2.4 Workspaces, papéis e missão
+
+**Regras acordadas para a implementação:**
+
+- A pessoa e sua conta são identidades centrais; permissões pertencem à associação do usuário com cada workspace.
+- Um usuário pode ter papéis diferentes em workspaces diferentes. Ser administrador em todas as missões significa ter papel Administrador em cada workspace correspondente.
+- Administradores e organizadores precisam estar associados a um membro existente. Conceder outro papel reutiliza a mesma pessoa; não cria cadastro duplicado.
+- Não será criada uma hierarquia global de superadministrador neste momento. Ela só será necessária se houver ações exclusivas que atravessem todos os workspaces, como criar workspaces ou administrar configurações globais da plataforma.
+- Cada membro possui uma missão atual. Ao cadastrá-lo, a missão é definida automaticamente a partir do workspace ativo. Um administrador pode alterar a missão; a alteração atualiza as listas em que o membro aparece, sem mover nem reescrever o histórico dos eventos anteriores.
+- As missões são Goiânia, Belém, São Paulo e Membros externos. Cristo Alegria Brasil corresponde à missão Membros externos.
+- A lista padrão de membros mostra somente pessoas cuja missão corresponde ao workspace ativo. A equipe pode consultar o diretório geral e filtrar por missão para localizar membros de outras unidades e conceder acesso.
+- O papel de acesso ao workspace e a missão do membro são conceitos distintos. Ter papel em um workspace não altera a missão atribuída à pessoa.
+- Todas as pessoas, membros e participantes, precisam ter data de nascimento no cadastro. Armazenar como data civil, sem horário.
+- O fuso horário dos workspaces é `America/Sao_Paulo`.
+- A aba Organizadores não exibe nem mantém status próprio.
+
+**Estado atual:** o seletor de workspace ainda é apenas visual; não existe diretório global de membros, campo de missão, data de nascimento obrigatória ou papel persistido por workspace. A tabela de organizadores ainda mostra um status demonstrativo até a interface ser atualizada.
+
+**Recomendação para o modelo:** manter `Person` como registro único global e associar contas/papéis por `WorkspaceMembership`. Uma pessoa pode ter várias associações de acesso, uma por workspace, sem duplicar os dados pessoais. A missão é um atributo do membro, não do papel de acesso; participantes não recebem missão automaticamente, salvo decisão futura de produto.
 
 ## 3. Pessoas
 
@@ -81,11 +103,17 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 **Estado atual:** participantes ficam em uma lista separada dos membros. O cadastro administrativo gera um registro local com grupo Participante, posição Voluntário, status Ativo, presença inicial zero e última visita vazia. A rota pública `/participar` foi removida: não há auto cadastro. O cadastro atual é iniciado no painel, mas o protótipo ainda não autentica nem restringe o acesso por perfil.
 
-### 3.3 Identificação única e duplicidades
+### 3.3 Data de nascimento
 
-**Regra proposta — A implementar:** não deve haver dois cadastros da mesma pessoa. Se CPF for adotado, deverá ser único; se não for, deverá existir uma chave única acordada pela comunidade.
+**Regra acordada — A implementar:** todo membro e participante deve ter data de nascimento no cadastro. O campo é uma data, sem horário, e não deve ser confundido com a data de ingresso na comunidade.
 
-**Decisão pendente:** o projeto não tem CPF ou outro documento de identificação no modelo. Definir qual chave identifica uma pessoa antes de implementar unicidade global.
+**Estado atual:** os formulários de membro e visitante ainda não coletam data de nascimento.
+
+### 3.4 Identificação única e duplicidades
+
+**Regra acordada:** não será coletado documento. O nome completo é a identificação humana usada para localizar uma pessoa. O banco ainda deve usar um ID interno imutável para relacionar eventos, presenças, workspaces e contas; esse ID não substitui nem exige documento.
+
+**Regra acordada — A implementar:** permitir pessoas diferentes com o mesmo nome completo. Ao detectar um possível homônimo, pedir confirmação administrativa antes de concluir o cadastro. Cada pessoa terá ID interno distinto e o sistema nunca deve unir cadastros automaticamente pelo nome.
 
 **Estado atual — Parcial:** ao adicionar visitante novo a um evento, o fluxo procura duplicação na lista de participantes por ID ou por e-mail preenchido. Isso não é uma restrição global: o formulário geral não valida duplicidade e não existe constraint de banco. A lista mockada de presença também pode conter repetições.
 
@@ -101,17 +129,17 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 **Estado atual implementado na interface:** Confirmado, Em breve e Cancelado. O tipo TypeScript também contempla Concluído, mas o seletor atual não oferece essa opção.
 
-**Regra proposta no segundo conjunto de regras:** Confirmado, Agendado, Em andamento, Encerrado e Cancelado. Eventos encerrados não poderão mais receber alterações de presença.
+**Regra acordada:** Confirmado, Agendado, Em andamento, Encerrado e Cancelado. Eventos encerrados não poderão mais receber alterações de presença. O rótulo antigo “Em breve” será normalizado para “Agendado”; “Concluído” será normalizado para “Encerrado”.
 
-**Decisão pendente:** Confirmado e Cancelado coincidem nas duas listas. “Em breve” não será tratado automaticamente como “Agendado”, e “Concluído” não será tratado automaticamente como “Encerrado”. Definir a lista final de estados, as transições permitidas e qual estado bloqueia edição de presença. Até essa decisão, a interface atual permanece a referência.
+**Implementação futura:** “Em andamento” ainda não está disponível. A interface e o schema precisam ser atualizados antes da migração inicial. As transições permitidas entre os cinco estados ainda precisam ser especificadas.
 
 ### 4.3 Edição, duplicação e exclusão
 
 **Estado atual:** a ação Editar na tabela apenas exibe feedback; não altera o evento. Duplicar cria uma cópia com novo ID, sufixo “(cópia)” e status Em breve, preservando os demais campos copiados. Excluir pede confirmação e remove o item da lista local.
 
-**Regra proposta — A implementar:** alterações em evento devem ser editáveis por usuários autorizados. Nenhum registro histórico usado pelo sistema deve ser removido fisicamente; a exclusão deve ser lógica (soft delete), preservando referências e histórico.
+**Regra acordada — A implementar:** somente administradores podem excluir registros. A exclusão deve ser lógica (soft delete), preservando referências e a trilha histórica. Organizadores não podem excluir registros.
 
-**Decisão pendente:** definir se o soft delete se aplica a todos os tipos de registro, quais papéis podem solicitá-lo e como itens removidos aparecem em consultas e relatórios.
+**Regra acordada — A implementar:** ao excluir uma pessoa logicamente, suas presenças continuam compondo os totais dos relatórios históricos, mas sua identidade deve ficar oculta nesses relatórios. Os registros e a auditoria permanecem preservados. A exclusão de eventos e de registros de presença deve seguir regras específicas; a política completa de soft delete ainda precisa ser definida.
 
 ## 5. Séries recorrentes e exceções de data
 
@@ -140,11 +168,11 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 6. Alterar presença não recalcula automaticamente percentual de frequência ou última visita.
 7. Os registros são locais e a base mockada pode conter repetições; não há unicidade garantida por servidor.
 
-### 6.2 Regra proposta e conflito
+### 6.2 Regra acordada
 
-**Regra proposta:** uma pessoa poderá ter apenas um registro de presença por evento, com estados Presente ou Ausente. Não poderá existir registro duplicado para a mesma pessoa no mesmo evento.
+**Regra acordada:** uma pessoa poderá ter apenas um registro de presença por ocorrência, com estados Presente, Ausente ou Justificado. Não poderá existir registro duplicado para a mesma pessoa na mesma ocorrência.
 
-**Decisão pendente:** o protótipo também permite Justificado. Confirmar se esse estado deve permanecer no produto final. A regra de unicidade deverá ser garantida no backend, além do filtro visual de inclusão.
+**Implementação futura:** a regra de unicidade deverá ser garantida no banco e na API, além do filtro visual de inclusão. Para eventos recorrentes, cada ocorrência tem seus próprios registros de presença.
 
 ### 6.3 Faltas
 
@@ -168,9 +196,11 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 ## 8. Exclusão, histórico e auditoria
 
-**Regras propostas — A implementar:**
+**Regras acordadas — A implementar:**
 
+- somente administradores podem excluir registros;
 - usar exclusão lógica para preservar registros referenciados e histórico;
+- manter nos totais históricos as presenças de pessoas excluídas logicamente, ocultando a identidade dessas pessoas nos relatórios;
 - registrar alterações importantes, como cadastro, presença e responsável do evento;
 - armazenar usuário responsável, data, horário e ação executada;
 - permitir que administradores consultem a auditoria.
@@ -179,9 +209,9 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 ## 9. Integridade dos dados
 
-**Regras propostas — A implementar:** impedir eventos duplicados, cadastros duplicados, presenças duplicadas e inconsistência entre membro e participante.
+**Regras acordadas — A implementar:** impedir presenças duplicadas por pessoa/ocorrência e manter uma identidade central de pessoa entre workspaces. Não haverá CPF ou outro documento. O nome completo será usado para identificação humana; registros relacionais usarão um ID interno imutável. Nomes iguais não devem causar junção automática de pessoas.
 
-**Estado atual:** IDs locais são gerados para novos eventos e alguns visitantes; isso não garante unicidade global. O formulário de inclusão no evento evita duplicar uma seleção na interface, mas os mocks e a ausência de endpoints de negócio impedem garantir integridade geral. O schema inicial prevê identificador documental opcional, mas não há regra de CPF nem validação transversal de membro versus visitante em execução.
+**Estado atual:** IDs locais são gerados para novos eventos e alguns visitantes; isso não garante unicidade global. O formulário de inclusão no evento evita duplicar uma seleção na interface, mas os mocks e a ausência de endpoints de negócio impedem garantir integridade geral. O schema inicial ainda contém `documentNumber` e não representa missão, nascimento obrigatório ou associação de acesso por workspace; ele deverá ser revisado antes da primeira migração.
 
 ## 10. Relatórios
 
@@ -209,21 +239,19 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 ### A implementar conforme decisão de produto
 
 - Dois perfis autenticados com permissões distintas.
-- Controle de eventos em andamento/encerrados e bloqueio de alteração de presença após encerramento.
-- Definição final dos status e manutenção ou remoção de Justificado.
-- Unicidade global de pessoas e presença por evento.
+- Status Confirmado, Agendado, Em andamento, Encerrado e Cancelado; eventos encerrados bloqueiam alterações de presença.
+- Presenças Presente, Ausente e Justificado.
+- Pessoa central com missão atual, diretório cross-workspace filtrável e papel de acesso independente em cada workspace.
+- Data de nascimento obrigatória para membros e participantes.
+- Fuso horário `America/Sao_Paulo` em todos os workspaces.
+- Exclusão lógica restrita a administradores.
 - Soft delete, histórico e auditoria.
 - Persistência, sincronização offline e recuperação após falha de conexão.
 - Remoção da ferramenta decorativa de QR de presença, mantendo apenas o QR informativo do WhatsApp.
 
 ## 13. Decisões pendentes
 
-1. O estado “Em breve” deverá ser renomeado para “Agendado” ou coexistirá com ele?
-2. “Concluído” é o estado desejado para substituir “Encerrado”, ou são conceitos diferentes?
-3. Quais transições de status serão permitidas e em qual situação a presença será bloqueada?
-4. Justificado permanece como estado válido de presença?
-5. CPF será adotado como identificador único ou a comunidade definirá outra chave?
-6. A regra de soft delete se aplica a eventos, pessoas, organizadores e registros de presença?
-7. Organizadores poderão somente registrar presença e consultar, ou também incluir pessoas em eventos?
+1. Quais transições serão permitidas entre os cinco estados de evento?
+2. A exclusão lógica se aplica a todas as entidades ou haverá exceções? A exclusão de pessoa e seus efeitos nos totais históricos já estão definidos.
 
-Até essas decisões serem confirmadas, as divergências ficam documentadas como propostas futuras; o comportamento atual do código não é reinterpretado.
+As decisões já acordadas estão descritas como regras de produto; os itens acima permanecem pendentes e não devem ser inferidos no schema.

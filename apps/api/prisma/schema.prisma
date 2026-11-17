@@ -24,9 +24,10 @@ enum RecordStatus {
 
 enum EventStatus {
   CONFIRMED
-  UPCOMING
+  SCHEDULED
+  IN_PROGRESS
+  ENDED
   CANCELLED
-  COMPLETED
 }
 
 enum AttendanceStatus {
@@ -42,7 +43,7 @@ model Workspace {
   slug        String                @unique
   createdAt   DateTime              @default(now())
   memberships WorkspaceMembership[]
-  people      Person[]
+  missionMembers Person[]           @relation("PersonMission")
   events      Event[]
   series      RecurringSeries[]
   auditLogs   AuditLog[]
@@ -50,118 +51,129 @@ model Workspace {
 
 model User {
   id              String                @id @default(cuid())
-  name            String
+  /// Must reference a Person with type MEMBER; enforce this in the API/domain service.
+  personId        String                @unique
   email           String                @unique
   passwordHash    String
   active          Boolean               @default(true)
+  deletedAt       DateTime?
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
+  person          Person                @relation(fields: [personId], references: [id])
   memberships     WorkspaceMembership[]
   responsibleFor  Event[]               @relation("EventResponsible")
   recordedEntries Attendance[]          @relation("AttendanceRecorder")
   auditLogs       AuditLog[]
+
+  @@index([active, deletedAt])
 }
 
 model WorkspaceMembership {
-  id          String        @id @default(cuid())
+  id          String       @id @default(cuid())
   workspaceId String
   userId      String
-  /// Must reference a Person when role is ORGANIZER; enforce this in the service layer.
-  personId    String?
   role        WorkspaceRole
-  createdAt   DateTime      @default(now())
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
-  user        User          @relation(fields: [userId], references: [id])
-  person      Person?       @relation(fields: [personId], references: [id])
+  deletedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
 
   @@unique([workspaceId, userId])
-  @@unique([workspaceId, personId])
-  @@index([userId, role])
+  @@index([userId, role, deletedAt])
 }
 
 model Person {
-  id             String        @id @default(cuid())
-  workspaceId    String
-  type           PersonType
-  name           String
-  email          String?
-  phone          String?
-  city           String?
-  documentNumber String?
-  groupName      String?
-  position       String?
-  status         RecordStatus  @default(ACTIVE)
-  joinedAt       DateTime?
-  notes          String?
-  deletedAt      DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  workspace      Workspace     @relation(fields: [workspaceId], references: [id])
-  attendance     Attendance[]
-  memberships    WorkspaceMembership[]
+  /// Stable global identity shared across missions. Never assign a different ID when the person changes mission.
+  id          String       @id @default(cuid())
+  /// Store the normalized display name: lowercase, with the first letter of each word uppercase.
+  name        String
+  type        PersonType
+  /// Required for members and optional for visitors; validate according to `type` in the API.
+  birthDate   DateTime?    @db.Date
+  /// Current mission. Required for members and null for visitors unless product rules change.
+  missionId   String?
+  email       String?
+  phone       String?
+  city        String?
+  groupName   String?
+  position    String?
+  status      RecordStatus @default(ACTIVE)
+  joinedAt    DateTime?    @db.Date
+  notes       String?
+  deletedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  mission     Workspace?  @relation("PersonMission", fields: [missionId], references: [id])
+  user        User?
+  attendance  Attendance[]
 
-  @@unique([workspaceId, documentNumber])
-  @@index([workspaceId, type, status])
-  @@index([workspaceId, name])
+  /// Deliberately no unique constraint on name: homonyms are allowed after administrative confirmation.
+  @@index([missionId, type, status, deletedAt])
+  @@index([name])
+  @@index([email])
 }
 
 model RecurringSeries {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   name        String
   weekday     Int
   time        String
   location    String
   description String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  active      Boolean   @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   events      Event[]
 
-  @@index([workspaceId, active])
+  @@index([workspaceId, active, deletedAt])
 }
 
 model Event {
-  id              String          @id @default(cuid())
-  workspaceId     String
-  seriesId        String?
-  responsibleId   String?
-  name            String
-  description     String?
-  startsAt        DateTime
-  location        String
-  category        String?
-  capacity        Int?
-  status          EventStatus     @default(CONFIRMED)
-  scheduleException Boolean       @default(false)
-  observations    String?
-  deletedAt       DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  workspace       Workspace       @relation(fields: [workspaceId], references: [id])
-  series          RecurringSeries? @relation(fields: [seriesId], references: [id])
-  responsible     User?           @relation("EventResponsible", fields: [responsibleId], references: [id])
-  attendance      Attendance[]
+  id                 String          @id @default(cuid())
+  workspaceId        String
+  seriesId           String?
+  responsibleId      String?
+  name               String
+  description        String?
+  startsAt           DateTime
+  location           String
+  category           String?
+  capacity           Int?
+  status             EventStatus     @default(CONFIRMED)
+  scheduleException Boolean         @default(false)
+  observations       String?
+  deletedAt          DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  workspace          Workspace       @relation(fields: [workspaceId], references: [id])
+  series             RecurringSeries? @relation(fields: [seriesId], references: [id])
+  responsible        User?           @relation("EventResponsible", fields: [responsibleId], references: [id])
+  attendance         Attendance[]
 
-  @@index([workspaceId, startsAt, status])
+  @@index([workspaceId, startsAt, status, deletedAt])
   @@index([seriesId, startsAt])
 }
 
 model Attendance {
-  id           String           @id @default(cuid())
-  personId     String
-  eventId      String
-  recorderId   String?
-  status       AttendanceStatus
-  notes        String?
-  recordedAt   DateTime         @default(now())
-  person       Person           @relation(fields: [personId], references: [id])
-  event        Event            @relation(fields: [eventId], references: [id])
-  recorder     User?            @relation("AttendanceRecorder", fields: [recorderId], references: [id])
+  id         String            @id @default(cuid())
+  personId   String
+  eventId    String
+  recorderId String?
+  /// Required for members; null for visitors. Validate against Person.type in the API.
+  status     AttendanceStatus?
+  notes      String?
+  recordedAt DateTime          @default(now())
+  deletedAt  DateTime?
+  person     Person            @relation(fields: [personId], references: [id])
+  event      Event             @relation(fields: [eventId], references: [id])
+  recorder   User?             @relation("AttendanceRecorder", fields: [recorderId], references: [id])
 
   @@unique([personId, eventId])
-  @@index([eventId, status])
+  @@index([eventId, status, deletedAt])
   @@index([personId, recordedAt])
 }
 
@@ -172,10 +184,15 @@ model AuditLog {
   action      String
   entityType  String
   entityId    String
+  /// Include the prior state needed to undo eligible actions. Event deletions are never undoable.
   metadata    Json?
+  undoable    Boolean   @default(false)
+  undoesLogId String?   @unique
   occurredAt  DateTime  @default(now())
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   actor       User?     @relation(fields: [actorId], references: [id])
+  undoesLog   AuditLog? @relation("AuditUndo", fields: [undoesLogId], references: [id])
+  undoneBy    AuditLog? @relation("AuditUndo")
 
   @@index([workspaceId, occurredAt])
   @@index([entityType, entityId])

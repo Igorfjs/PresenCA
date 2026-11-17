@@ -30,9 +30,9 @@ Produção só entra no fluxo depois que o modelo, as migrações e a integraç�
 
 As decisões abaixo foram registradas em `02_Regras_de_Negocio.md` e orientam o modelo:
 
-- Status finais de evento: Confirmado, Agendado, Em andamento, Encerrado e Cancelado. Encerrado bloqueia alterações de presença. Os rótulos antigos “Em breve” e “Concluído” serão normalizados para Agendado e Encerrado.
+- Status finais de evento: Confirmado, Agendado, Em andamento, Encerrado e Cancelado. Somente administradores podem alterar o status e podem selecionar qualquer estado a qualquer momento, inclusive reabrir um evento Encerrado. Enquanto Encerrado, presença fica bloqueada; depois de reaberto, volta a ser editável. Os rótulos antigos “Em breve” e “Concluído” serão normalizados para Agendado e Encerrado.
 - Presença possui Presente, Ausente e Justificado.
-- Não será coletado documento. Nome completo é a identificação humana; o banco terá ID interno imutável para relações.
+- Não será coletado documento. Cada pessoa terá ID interno global e imutável, compartilhado entre missões; o nome não será chave relacional.
 - Administradores e organizadores precisam corresponder a membros existentes.
 - Uma pessoa/conta pode ter associação e papel diferentes em vários workspaces.
 - Não haverá hierarquia global de superadministrador inicialmente. Uma pessoa com papel Administrador em cada workspace pode administrar todas as missões. Um papel global só será necessário para ações próprias da plataforma, como criar workspaces ou controlar configurações globais.
@@ -40,18 +40,13 @@ As decisões abaixo foram registradas em `02_Regras_de_Negocio.md` e orientam o 
 - As missões são Goiânia, Belém, São Paulo e Membros externos. Cristo Alegria Brasil corresponde à quarta missão, Membros externos.
 - A lista padrão é filtrada para a missão do workspace; diretório global pode ser consultado com filtro de missão.
 - Todos os workspaces usam `America/Sao_Paulo`.
-- Todos os membros e participantes precisam de data de nascimento, armazenada como data sem horário.
+- Membros precisam de data de nascimento; para participantes é opcional. Armazenar como data sem horário.
 - A aba Organizadores não terá coluna nem regra de status.
-- Somente administradores podem excluir, por exclusão lógica.
+- Somente administradores podem excluir registros. A auditoria permite desfazer exclusões, exceto a de eventos; um evento excluído só pode ser recriado.
 - Ao excluir uma pessoa logicamente, suas presenças continuam nos totais históricos e sua identidade fica oculta nos relatórios; registros e auditoria são preservados.
-- Nomes completos iguais são permitidos com confirmação administrativa e IDs internos distintos; pessoas nunca são unidas automaticamente pelo nome.
+- Nomes completos iguais são permitidos com confirmação administrativa e IDs globais distintos; nomes são armazenados em minúsculas com iniciais de cada palavra maiúsculas e nunca são usados para unir pessoas.
 
-Pendências que precisam ser resolvidas antes da migração inicial:
-
-1. Quais transições são permitidas entre status de evento?
-2. Quais entidades têm exclusão lógica, além de pessoas e eventos? A exclusão de pessoa e seus efeitos nos totais históricos já estão definidos.
-
-**Saída da etapa:** pendências respondidas e regras sem contradição antes de congelar o schema.
+**Etapa 0 concluída:** as decisões de produto necessárias para iniciar a revisão do modelo foram respondidas e registradas em `02_Regras_de_Negocio.md`. A política de desfazer exclusões deve gerar também um evento de auditoria; eventos excluídos não podem ser restaurados.
 
 ## Etapa 1 — Revisar o modelo de dados
 
@@ -59,13 +54,13 @@ Revisar `apps/api/prisma/schema.prisma` e desenhar as relações antes da migra�
 
 - `Workspace`: missão/comunidade e fronteira de isolamento dos dados.
 - `User`: credencial e identidade de acesso ao sistema.
-- `WorkspaceMembership`: associa usuário e membro ao workspace e define papel por workspace. Tanto Administrador quanto Organizador referenciam membro existente.
-- `Person`: registro central da pessoa, com tipo Membro ou Visitante e data de nascimento. Membros têm missão atual (Goiânia, Belém, São Paulo ou Membros externos); a missão não é a mesma coisa que o papel de acesso.
+- `WorkspaceMembership`: associa o usuário (que está ligado a um membro) ao workspace e define o papel nesse workspace. A conta deve pertencer a uma pessoa do tipo Membro, tanto para Administrador quanto para Organizador.
+- `Person`: registro central com ID global, tipo Membro ou Visitante, nome normalizado e data de nascimento (obrigatória para membros e opcional para visitantes). Membros têm missão atual (Goiânia, Belém, São Paulo ou Membros externos); a missão não é a mesma coisa que o papel de acesso.
 - `RecurringSeries` e `Event`: configuração recorrente e ocorrências individuais, incluindo exceções de data.
 - `Attendance`: vínculo pessoa/evento, com unicidade de um registro por pessoa e ocorrência.
 - `AuditLog`: ator, workspace, ação, entidade e data/hora.
 
-Revisar, em particular, referências globais de pessoa, associação pessoa/usuário, chaves únicas por workspace, soft delete, campos obrigatórios e índices de busca. Nomes completos podem se repetir após confirmação administrativa e nunca serão usados como chave relacional. A missão do membro é preenchida inicialmente pelo workspace ativo e depois pode ser alterada por administrador. Consultas de membros filtram por missão; relatórios históricos mantêm os totais de presenças de pessoas excluídas, ocultando sua identidade. Guardar instantes de evento de forma consistente e exibir `America/Sao_Paulo` na interface; nascimento é um campo de data sem horário.
+O schema foi revisado como rascunho, sem migração. Antes da migração, revisar associação obrigatória entre conta e membro, restrições de missão e tipo de pessoa, nomes duplicados, índices de busca e exclusões reversíveis. IDs de pessoa são globais e permanecem iguais ao mudar de missão. O aniversário é obrigatório para membros e opcional para visitantes, como data sem horário. Nomes devem ser normalizados ao salvar, mas nomes iguais continuam sendo pessoas distintas. Consultas de membros filtram por missão; relatórios históricos mantêm os totais de presenças de pessoas excluídas, ocultando sua identidade. O fluxo de auditoria precisa distinguir exclusões reversíveis das de eventos, que não podem ser restauradas. Guardar instantes de evento de forma consistente e exibir `America/Sao_Paulo` na interface.
 
 **Saída da etapa:** diagrama simples de entidades, schema revisado e restrições aprovadas.
 
@@ -101,7 +96,7 @@ Implementar e revisar um módulo por vez, seguindo a dependência dos dados:
 2. **Eventos e recorrências:** séries, ocorrências, exceção de data, responsável, estados e cancelamento.
 3. **Presenças:** adicionar pessoa à ocorrência, atualizar status, impedir duplicidade e bloquear edição conforme o estado final do evento.
 4. **Relatórios:** consultas agregadas que excluem cancelados e respeitam workspace e filtros definidos.
-5. **Configurações e auditoria:** dados da comunidade, preferências e histórico das ações autorizadas.
+5. **Configurações e auditoria:** dados da comunidade, preferências e histórico das ações autorizadas. Gravar a alteração e a auditoria na mesma transação; guardar o estado anterior necessário para desfazer exclusões permitidas. Exclusão de evento não pode ser desfeita.
 
 Endpoints REST devem usar DTOs validados, respostas e erros consistentes, paginação para listas e documentação Swagger. Operações que alteram várias tabelas devem usar transação.
 
@@ -140,4 +135,4 @@ O seletor de workspace só deve passar a filtrar dados depois que a autorizaçã
 
 ## Próximo passo recomendado
 
-Fechar as pendências restantes da **Etapa 0** registradas em `02_Regras_de_Negocio.md`. Já estão definidos o workspace Brasil como missão Membros externos, a confirmação de homônimos e a preservação dos totais históricos com identidade oculta após exclusão de pessoa. Depois das pendências, revisar o schema da **Etapa 1** para representar identidade central, missão, aniversário e papéis por workspace antes de criar a migração inicial.
+Revisar e aprovar o rascunho atualizado de `apps/api/prisma/schema.prisma`, conferindo relações, restrições condicionais e auditoria/desfazer. A Etapa 0 está concluída. Depois da aprovação e validação do schema, criar a migração inicial somente no PostgreSQL local de desenvolvimento.

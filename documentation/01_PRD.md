@@ -117,7 +117,7 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 | RF-04 | Criar séries recorrentes com configurações padrão de dia da semana, hora, local, categoria, responsável, capacidade e descrição. | Implementado em estado local; salva o template e a primeira ocorrência, não agenda as seguintes. |
 | RF-05 | Criar uma ocorrência baseada em série preenchendo os padrões e permitindo ajustes daquela ocorrência. | Implementado em estado local. |
 | RF-06 | Permitir exceção de data em ocorrência recorrente mantendo o vínculo à série e o dia padrão intacto. | Implementado pelo campo `scheduleException`. |
-| RF-07 | Usar os status Confirmado, Agendado, Em andamento, Encerrado e Cancelado. Evento encerrado bloqueia alteração de presença. | Protótipo ainda usa Confirmado, Em breve e Cancelado; precisa ser atualizado antes da integração. |
+| RF-07 | Usar os status Confirmado, Agendado, Em andamento, Encerrado e Cancelado. Somente administradores alteram status e podem reabrir um evento encerrado; presença fica bloqueada enquanto Encerrado. | Protótipo ainda usa Confirmado, Em breve e Cancelado; precisa ser atualizado antes da integração. |
 | RF-08 | Excluir evento com confirmação e duplicar uma ocorrência. | Implementado em estado local. |
 | RF-09 | Exibir detalhes do evento e participantes inscritos. | Implementado com dados locais/mockados. |
 | RF-10 | Adicionar membro ou visitante conhecido a um evento e registrar novo visitante durante o fluxo. | Implementado em estado local. |
@@ -131,7 +131,7 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 | RF-18 | Excluir eventos cancelados dos relatórios. | Implementado para cartões, gráfico, tabela e seleção de ocorrências. |
 | RF-19 | Alternar o tema claro/escuro do painel. | Alternância visual durante a sessão. |
 | RF-20 | Pesquisar páginas/ações por paleta de comandos. | Implementado; atalho `Ctrl+K` ou `⌘K`, quando confirmado no código. |
-| RF-21 | Exigir data de nascimento em cadastros de membros e participantes. | A implementar; formulários atuais não coletam esse dado. |
+| RF-21 | Exigir data de nascimento para membros e aceitar o campo como opcional para participantes. | A implementar; formulários atuais não coletam esse dado. |
 | RF-22 | Atribuir missão automaticamente pelo workspace ativo ao cadastrar membro; permitir que administradores alterem a missão. | A implementar. A lista padrão deve mostrar membros da missão do workspace. |
 | RF-23 | Permitir que uma pessoa tenha papel de acesso diferente em cada workspace. Administradores e organizadores devem estar vinculados a membros existentes. | A implementar na autenticação e autorização da API. |
 | RF-24 | Disponibilizar à equipe um diretório global de membros, pesquisável e filtrável por missão. | A implementar; o seletor de workspace atual não filtra dados. |
@@ -148,7 +148,7 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 - Ao criar uma ocorrência de série, a data precisa respeitar o dia padrão, a menos que seja marcada a opção **Alterar data apenas desta ocorrência**.
 - Se marcada, a ocorrência recebe `scheduleException: true`, pode acontecer em outro dia, permanece na série e aparece identificada como exceção nos detalhes e relatórios.
 - Editar os valores de uma ocorrência não atualiza os padrões do template.
-- Status finais acordados: Confirmado, Agendado, Em andamento, Encerrado e Cancelado. A interface atual ainda precisa ser normalizada.
+- Status finais acordados: Confirmado, Agendado, Em andamento, Encerrado e Cancelado. Administradores podem selecionar qualquer status a qualquer momento, inclusive reabrir eventos encerrados. A interface atual ainda precisa ser normalizada e a API deve restringir a ação a administradores.
 - Eventos Cancelados não entram nos resultados dos relatórios.
 
 ### 9.2 Participação e status de presença
@@ -163,7 +163,7 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 
 - Membro tem posição entre Consagrado, Aspirante, Vocacionado e Voluntário, além de grupo/ministério e estado Ativo/Inativo.
 - Membro tem uma missão atual (Goiânia, Belém, São Paulo ou Membros externos), atribuída pelo workspace no cadastro; administrador pode alterá-la.
-- Membros e participantes terão data de nascimento obrigatória.
+- Membros terão data de nascimento obrigatória; para participantes, o campo será opcional.
 - Visitantes ficam separados da lista de membros na tela Participantes.
 - O campo Última visita contém data e nome do evento ou ausência de visita registrada.
 
@@ -177,6 +177,7 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 - Todos os workspaces usam o fuso `America/Sao_Paulo`.
 - A aba Organizadores não possui status.
 - Somente administradores podem excluir registros. Ao excluir uma pessoa logicamente, suas presenças continuam compondo os totais históricos, mas sua identidade fica oculta nos relatórios.
+- Exclusões podem ser desfeitas pela auditoria por administradores, exceto a exclusão de eventos, que não pode ser revertida; para recuperá-lo, é necessário criar outro evento.
 
 ### 9.5 QR Code do grupo News
 
@@ -202,7 +203,7 @@ Os indicadores atuais mostram quantidade de ocorrências, inscritos acumulados e
 
 | Entidade | Campos relevantes no protótipo |
 | --- | --- |
-| Pessoa | ID interno, nome completo, tipo, data de nascimento, telefone, e-mail e cidade. Membro ainda tem missão, grupo, posição, status e data de ingresso. |
+| Pessoa | ID global imutável, nome normalizado, tipo, data de nascimento (obrigatória para membro e opcional para participante), telefone, e-mail e cidade. Membro ainda tem missão, grupo, posição, status e data de ingresso. |
 | Evento/ocorrência | ID, nome, tipo, data, hora, local, responsável, status, inscritos, descrição, capacidade, observações, `seriesId` e `scheduleException`. |
 | Série recorrente | ID, nome, categoria, dia da semana, hora, local, responsável, capacidade, descrição e observações. |
 | Usuário e papel por workspace | Conta de autenticação ligada a uma pessoa e papéis de Administrador/Organizador por workspace. |
@@ -250,9 +251,8 @@ Antes de produção, definir e validar com a comunidade:
 2. Como editar ou cancelar uma série inteira versus uma única ocorrência.
 3. Se uma exceção precisa de justificativa, histórico ou aprovação.
 4. Se a troca de data deve notificar membros e visitantes, e por quais canais.
-5. Quais transições entre status de evento serão permitidas.
-6. Quais dados pessoais são obrigatórios além do aniversário, por quanto tempo serão guardados e quem pode acessá-los.
-7. Se visitantes precisam de cadastro único e como evitar duplicidades.
-8. Como serão calculados presença, ausência, justificativa, inscritos e médias nos relatórios.
-9. Quem pode redefinir o convite News e como atualizar o QR após uma redefinição.
-10. Quais formatos e filtros devem ser incluídos na exportação real.
+5. Quais dados pessoais são obrigatórios além do aniversário, por quanto tempo serão guardados e quem pode acessá-los.
+6. Se visitantes precisam de cadastro único e como evitar duplicidades.
+7. Como serão calculados presença, ausência, justificativa, inscritos e médias nos relatórios.
+8. Quem pode redefinir o convite News e como atualizar o QR após uma redefinição.
+9. Quais formatos e filtros devem ser incluídos na exportação real.

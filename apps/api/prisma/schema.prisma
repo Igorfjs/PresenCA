@@ -41,7 +41,7 @@ model Workspace {
   name        String
   description String?
   slug        String                @unique
-  createdAt   DateTime              @default(now())
+  createdAt   DateTime              @default(now()) @db.Timestamptz(3)
   memberships WorkspaceMembership[]
   missionMembers Person[]           @relation("PersonMission")
   events      Event[]
@@ -56,12 +56,13 @@ model User {
   email           String                @unique
   passwordHash    String
   active          Boolean               @default(true)
-  deletedAt       DateTime?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  deletedAt       DateTime?             @db.Timestamptz(3)
+  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @db.Timestamptz(3)
   person          Person                @relation(fields: [personId], references: [id])
   memberships     WorkspaceMembership[]
   responsibleFor  Event[]               @relation("EventResponsible")
+  responsibleForSeries RecurringSeries[] @relation("SeriesResponsible")
   recordedEntries Attendance[]          @relation("AttendanceRecorder")
   auditLogs       AuditLog[]
 
@@ -73,9 +74,9 @@ model WorkspaceMembership {
   workspaceId String
   userId      String
   role        WorkspaceRole
-  deletedAt   DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?   @db.Timestamptz(3)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @db.Timestamptz(3)
   workspace   Workspace   @relation(fields: [workspaceId], references: [id])
   user        User        @relation(fields: [userId], references: [id])
 
@@ -101,9 +102,10 @@ model Person {
   status      RecordStatus @default(ACTIVE)
   joinedAt    DateTime?    @db.Date
   notes       String?
-  deletedAt   DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?   @db.Timestamptz(3)
+  anonymizedAt DateTime?  @db.Timestamptz(3)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @db.Timestamptz(3)
   mission     Workspace?  @relation("PersonMission", fields: [missionId], references: [id])
   user        User?
   attendance  Attendance[]
@@ -122,11 +124,16 @@ model RecurringSeries {
   time        String
   location    String
   description String?
+  category    String?
+  responsibleId String?
+  capacity    Int?
+  observations String?
   active      Boolean   @default(true)
-  deletedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  responsible User?     @relation("SeriesResponsible", fields: [responsibleId], references: [id])
   events      Event[]
 
   @@index([workspaceId, active, deletedAt])
@@ -139,16 +146,16 @@ model Event {
   responsibleId      String?
   name               String
   description        String?
-  startsAt           DateTime
+  startsAt           DateTime        @db.Timestamptz(3)
   location           String
   category           String?
   capacity           Int?
   status             EventStatus     @default(CONFIRMED)
   scheduleException Boolean         @default(false)
   observations       String?
-  deletedAt          DateTime?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  deletedAt          DateTime?       @db.Timestamptz(3)
+  createdAt          DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime        @updatedAt @db.Timestamptz(3)
   workspace          Workspace       @relation(fields: [workspaceId], references: [id])
   series             RecurringSeries? @relation(fields: [seriesId], references: [id])
   responsible        User?           @relation("EventResponsible", fields: [responsibleId], references: [id])
@@ -166,13 +173,14 @@ model Attendance {
   /// Required for members; null for visitors. Validate against Person.type in the API.
   status     AttendanceStatus?
   notes      String?
-  recordedAt DateTime          @default(now())
-  deletedAt  DateTime?
+  recordedAt DateTime          @default(now()) @db.Timestamptz(3)
+  deletedAt  DateTime?         @db.Timestamptz(3)
   person     Person            @relation(fields: [personId], references: [id])
   event      Event             @relation(fields: [eventId], references: [id])
   recorder   User?             @relation("AttendanceRecorder", fields: [recorderId], references: [id])
 
-  @@unique([personId, eventId])
+  /// Enforce one active row per person/event with a PostgreSQL partial unique index in the initial migration.
+  @@index([personId, eventId, deletedAt])
   @@index([eventId, status, deletedAt])
   @@index([personId, recordedAt])
 }
@@ -184,11 +192,12 @@ model AuditLog {
   action      String
   entityType  String
   entityId    String
-  /// Include the prior state needed to undo eligible actions. Event deletions are never undoable.
+  /// Include the prior state needed to undo eligible actions. Personal snapshots must be scrubbed after one week.
   metadata    Json?
   undoable    Boolean   @default(false)
   undoesLogId String?   @unique
-  occurredAt  DateTime  @default(now())
+  undoExpiresAt DateTime? @db.Timestamptz(3)
+  occurredAt  DateTime  @default(now()) @db.Timestamptz(3)
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   actor       User?     @relation(fields: [actorId], references: [id])
   undoesLog   AuditLog? @relation("AuditUndo", fields: [undoesLogId], references: [id])

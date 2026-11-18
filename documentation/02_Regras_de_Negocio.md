@@ -138,17 +138,17 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 **Estado atual:** a ação Editar na tabela apenas exibe feedback; não altera o evento. Duplicar cria uma cópia com novo ID, sufixo “(cópia)” e status Em breve, preservando os demais campos copiados. Excluir pede confirmação e remove o item da lista local.
 
-**Regra acordada — A implementar:** somente administradores podem excluir registros. A exclusão deve preservar referências e a trilha histórica, e a auditoria deve oferecer uma ação **Desfazer** para reverter exclusões. Desfazer também deve gerar um novo registro de auditoria. Eventos são a exceção: um evento excluído não pode ser restaurado; para voltar a tê-lo, o administrador deve cadastrá-lo novamente.
+**Regra acordada — A implementar:** somente administradores podem excluir registros. Exclusões podem ser desfeitas pela auditoria durante sete dias; a ação **Desfazer** gera um novo registro de auditoria. Depois desse prazo, dados pessoais da pessoa excluída são anonimizados e não podem ser recuperados. Eventos são a exceção desde o momento da exclusão: não podem ser restaurados, apenas recriados.
 
-**Regra acordada — A implementar:** ao excluir uma pessoa logicamente, suas presenças continuam compondo os totais dos relatórios históricos, mas sua identidade deve ficar oculta nesses relatórios. Os registros e a auditoria permanecem preservados. Exclusões de registros que não sejam eventos podem ser desfeitas por administradores; eventos excluídos não podem ser restaurados e precisam ser recriados.
+**Regra acordada — A implementar:** excluir uma pessoa da lista de membros ou participantes não apaga nem altera as estatísticas das presenças anteriores. Durante sete dias a identidade pode ser restaurada; após isso, seus dados identificáveis são anonimizados, mas as presenças continuam compondo os totais históricos sem revelar quem era a pessoa. Evento excluído é removido dos relatórios; para voltar a utilizá-lo, deve ser recriado com novo ID.
 
 ## 5. Séries recorrentes e exceções de data
 
 ### 5.1 Regras implementadas
 
-1. Uma série contém nome, categoria, dia da semana, horário, local, responsável, capacidade, descrição e observações.
+1. Uma série contém valores padrão de nome, categoria, dia da semana, horário, local, responsável, capacidade, descrição e observações, definidos ao cadastrar o evento recorrente.
 2. Ao criar a série, o protótipo cria o template e somente a primeira ocorrência no próximo dia configurado. Não agenda ocorrências futuras automaticamente.
-3. Selecionar uma série no formulário de evento preenche os valores padrão; mudanças feitas nessa ocorrência não alteram o template.
+3. Selecionar uma série no formulário de evento preenche os valores padrão. Cada ocorrência guarda seus próprios valores efetivos; alterações nela não alteram o template da série.
 4. A data deve coincidir com o dia da série, exceto quando **Alterar data apenas desta ocorrência** estiver marcado.
 5. A exceção salva `scheduleException: true` e mantém `seriesId`, então continua ligada à série e identificada nos detalhes e relatórios.
 6. Mudar a seleção de série redefine o marcador de exceção.
@@ -171,9 +171,9 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 ### 6.2 Regra acordada
 
-**Regra acordada:** uma pessoa poderá ter apenas um registro de presença por ocorrência, com estados Presente, Ausente ou Justificado. Não poderá existir registro duplicado para a mesma pessoa na mesma ocorrência.
+**Regra acordada:** uma pessoa poderá ter apenas um registro ativo de presença por ocorrência, com estados Presente, Ausente ou Justificado. Se a participação for removida e a pessoa for adicionada novamente, será criado um novo registro com ID próprio; o registro anterior permanece no histórico.
 
-**Implementação futura:** a regra de unicidade deverá ser garantida no banco e na API, além do filtro visual de inclusão. Para eventos recorrentes, cada ocorrência tem seus próprios registros de presença.
+**Implementação futura:** a regra de unicidade ativa deverá ser garantida na API e por índice único parcial no PostgreSQL, além do filtro visual de inclusão. Para eventos recorrentes, cada ocorrência tem seus próprios registros de presença.
 
 ### 6.3 Faltas
 
@@ -199,9 +199,11 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 **Regras acordadas — A implementar:**
 
-- somente administradores podem excluir registros e usar a ação Desfazer da auditoria para reverter uma exclusão, exceto a de eventos;
-- preservar referências e histórico de exclusões; um evento excluído deve ser recriado, não restaurado;
-- manter nos totais históricos as presenças de pessoas excluídas logicamente, ocultando a identidade dessas pessoas nos relatórios;
+- somente administradores podem excluir registros; exclusões reversíveis podem ser desfeitas pela auditoria por até sete dias, exceto a de eventos;
+- após sete dias, remover os dados identificáveis da pessoa excluída e expirar os dados pessoais guardados para restauração;
+- manter nos totais históricos as presenças de pessoas excluídas, ocultando a identidade durante e após a janela de restauração;
+- excluir eventos apagados dos relatórios; um evento precisa ser recriado, não restaurado;
+- quando uma presença individual for excluída, ela deixa de compor as estatísticas enquanto estiver excluída; se desfeita dentro do prazo, volta a contar;
 - registrar alterações importantes, como cadastro, presença e responsável do evento;
 - armazenar usuário responsável, data, horário e ação executada;
 - permitir que administradores consultem a auditoria.
@@ -210,13 +212,15 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 
 ## 9. Integridade dos dados
 
-**Regras acordadas — A implementar:** impedir presenças duplicadas por pessoa/ocorrência e manter uma identidade central de pessoa entre workspaces. Não haverá CPF ou outro documento. O nome completo será usado para identificação humana; registros relacionais usarão um ID interno imutável. Nomes iguais não devem causar junção automática de pessoas.
+**Regras acordadas — A implementar:** impedir mais de uma presença ativa por pessoa/ocorrência e manter uma identidade central de pessoa entre workspaces. Ao adicionar novamente uma pessoa após remoção, criar novo registro de presença, sem alterar o anterior. Não haverá CPF ou outro documento. O nome completo será usado para identificação humana; registros relacionais usarão um ID global imutável. Nomes iguais não devem causar junção automática de pessoas.
 
 **Estado atual:** o schema Prisma rascunho foi atualizado para usar um ID global por pessoa, missão e aniversário, sem documento. Ainda não existem migrações nem operações da API para garantir unicidade, confirmar homônimos ou normalizar os nomes. O formulário de inclusão no evento evita duplicar uma seleção na interface, mas os mocks não garantem integridade geral.
 
 ## 10. Relatórios
 
 **Implementado:** filtrar todos os eventos, uma série por `seriesId` ou ocorrência individual e período Dia, Mês, Semestre, Ano ou Desde o início. Exceções continuam consolidadas na série. Eventos Cancelados são excluídos das opções de ocorrência, indicadores, gráfico e tabela. Os valores são calculados a partir da quantidade local de inscritos `attendees`.
+
+**Regra acordada — A implementar:** eventos excluídos também são omitidos dos relatórios. Excluir uma pessoa não remove suas presenças nem altera os totais históricos; os dados exibidos devem ocultar sua identidade.
 
 **Limitações:** números de origem são mockados; exportação apenas mostra notificação e não gera arquivo. Não há trilha para explicar ou auditar como uma métrica foi calculada.
 
@@ -240,13 +244,14 @@ O domínio prevê dois tipos de pessoa: **Membro** e **Participante** (visitante
 ### A implementar conforme decisão de produto
 
 - Dois perfis autenticados com permissões distintas.
-- Status Confirmado, Agendado, Em andamento, Encerrado e Cancelado; eventos encerrados bloqueiam alterações de presença.
+- Status Confirmado, Agendado, Em andamento, Encerrado e Cancelado; somente administradores alteram status, e Encerrado bloqueia presença até ser reaberto.
 - Presenças Presente, Ausente e Justificado.
 - Pessoa central com missão atual, diretório cross-workspace filtrável e papel de acesso independente em cada workspace.
 - Data de nascimento obrigatória para membros e opcional para participantes.
 - Fuso horário `America/Sao_Paulo` em todos os workspaces.
-- Exclusão lógica restrita a administradores.
-- Soft delete, histórico e auditoria.
+- Exclusão restrita a administradores; desfazer em até sete dias, exceto eventos.
+- Anonimização de pessoa após o prazo sem remover totais históricos; eventos excluídos não entram em relatórios.
+- Histórico e auditoria das alterações.
 - Persistência, sincronização offline e recuperação após falha de conexão.
 - Remoção da ferramenta decorativa de QR de presença, mantendo apenas o QR informativo do WhatsApp.
 

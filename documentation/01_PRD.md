@@ -177,7 +177,9 @@ Os identificadores abaixo registram requisitos de produto. O estado indica se o 
 - Todos os workspaces usam o fuso `America/Sao_Paulo`.
 - A aba Organizadores não possui status.
 - Somente administradores podem excluir registros. Ao excluir uma pessoa logicamente, suas presenças continuam compondo os totais históricos, mas sua identidade fica oculta nos relatórios.
-- Exclusões podem ser desfeitas pela auditoria por administradores, exceto a exclusão de eventos, que não pode ser revertida; para recuperá-lo, é necessário criar outro evento.
+- Administradores podem desfazer exclusões por até sete dias, exceto exclusões de eventos, que não podem ser restauradas.
+- Após sete dias, os dados identificáveis da pessoa excluída são anonimizados, mas as presenças anteriores continuam compondo os totais históricos.
+- Eventos excluídos não aparecem nos relatórios. Para voltar a utilizá-los, é necessário criar um novo evento.
 
 ### 9.5 QR Code do grupo News
 
@@ -197,7 +199,7 @@ Os relatórios permitem a seleção de:
 - Uma ocorrência individual.
 - Período: Dia, Mês, Semestre, Ano ou Desde o início.
 
-Os indicadores atuais mostram quantidade de ocorrências, inscritos acumulados e média de inscritos. O gráfico agrupa inscritos por mês e a tabela lista ocorrência, data, série, inscritos e status. Exceções de data continuam associadas à série e recebem indicação própria. Cancelados são removidos antes da agregação. O botão de exportação atualmente apenas exibe feedback; PDF ou Excel ainda não são gerados.
+Os indicadores atuais mostram quantidade de ocorrências, inscritos acumulados e média de inscritos. O gráfico agrupa inscritos por mês e a tabela lista ocorrência, data, série, inscritos e status. Exceções de data continuam associadas à série e recebem indicação própria. Cancelados e eventos excluídos são removidos antes da agregação. Excluir uma pessoa não altera os totais de presença, mas sua identidade deve ser ocultada. O botão de exportação atualmente apenas exibe feedback; PDF ou Excel ainda não são gerados.
 
 ## 11. Entidades e campos principais
 
@@ -205,10 +207,10 @@ Os indicadores atuais mostram quantidade de ocorrências, inscritos acumulados e
 | --- | --- |
 | Pessoa | ID global imutável, nome normalizado, tipo, data de nascimento (obrigatória para membro e opcional para participante), telefone, e-mail e cidade. Membro ainda tem missão, grupo, posição, status e data de ingresso. |
 | Evento/ocorrência | ID, nome, tipo, data, hora, local, responsável, status, inscritos, descrição, capacidade, observações, `seriesId` e `scheduleException`. |
-| Série recorrente | ID, nome, categoria, dia da semana, hora, local, responsável, capacidade, descrição e observações. |
+| Série recorrente | ID e valores padrão de nome, categoria, dia da semana, hora, local, responsável, capacidade, descrição e observações; cada ocorrência guarda seus valores efetivos. |
 | Usuário e papel por workspace | Conta de autenticação ligada a uma pessoa e papéis de Administrador/Organizador por workspace. |
 | Organizador | Associação de usuário e membro existente a um workspace e um papel de acesso, sem status próprio. |
-| Registro de participação | ID, membro/participante, evento e status local. Visitantes podem aparecer sem status aplicável. |
+| Registro de participação | ID, membro/participante, evento e status local. Visitantes podem aparecer sem status aplicável. Há um registro ativo por pessoa/ocorrência; remover e adicionar novamente gera novo ID e mantém o registro anterior. |
 
 Os dados de demonstração incluem aproximadamente 50 membros, 10 eventos, 5 séries recorrentes, 5 organizadores e 200 registros de presença em `mocks/data.ts`. Os participantes iniciais são definidos em `app/page.tsx`. Indicadores e gráficos não devem ser tratados como métricas operacionais atuais.
 

@@ -42,8 +42,9 @@ As decisões abaixo foram registradas em `02_Regras_de_Negocio.md` e orientam o 
 - Todos os workspaces usam `America/Sao_Paulo`.
 - Membros precisam de data de nascimento; para participantes é opcional. Armazenar como data sem horário.
 - A aba Organizadores não terá coluna nem regra de status.
-- Somente administradores podem excluir registros. A auditoria permite desfazer exclusões, exceto a de eventos; um evento excluído só pode ser recriado.
-- Ao excluir uma pessoa logicamente, suas presenças continuam nos totais históricos e sua identidade fica oculta nos relatórios; registros e auditoria são preservados.
+- Somente administradores podem excluir registros. Exclusões podem ser desfeitas por sete dias, exceto a de eventos, que não podem ser restaurados e são omitidos dos relatórios.
+- Ao excluir uma pessoa, manter suas presenças e totais históricos, ocultar sua identidade e anonimizar seus dados pessoais após sete dias.
+- Remover e adicionar novamente uma pessoa a uma ocorrência cria um novo registro de presença com novo ID, preservando o registro anterior.
 - Nomes completos iguais são permitidos com confirmação administrativa e IDs globais distintos; nomes são armazenados em minúsculas com iniciais de cada palavra maiúsculas e nunca são usados para unir pessoas.
 
 **Etapa 0 concluída:** as decisões de produto necessárias para iniciar a revisão do modelo foram respondidas e registradas em `02_Regras_de_Negocio.md`. A política de desfazer exclusões deve gerar também um evento de auditoria; eventos excluídos não podem ser restaurados.
@@ -56,11 +57,11 @@ Revisar `apps/api/prisma/schema.prisma` e desenhar as relações antes da migra�
 - `User`: credencial e identidade de acesso ao sistema.
 - `WorkspaceMembership`: associa o usuário (que está ligado a um membro) ao workspace e define o papel nesse workspace. A conta deve pertencer a uma pessoa do tipo Membro, tanto para Administrador quanto para Organizador.
 - `Person`: registro central com ID global, tipo Membro ou Visitante, nome normalizado e data de nascimento (obrigatória para membros e opcional para visitantes). Membros têm missão atual (Goiânia, Belém, São Paulo ou Membros externos); a missão não é a mesma coisa que o papel de acesso.
-- `RecurringSeries` e `Event`: configuração recorrente e ocorrências individuais, incluindo exceções de data.
-- `Attendance`: vínculo pessoa/evento, com unicidade de um registro por pessoa e ocorrência.
-- `AuditLog`: ator, workspace, ação, entidade e data/hora.
+- `RecurringSeries` e `Event`: a série mantém os padrões configurados ao cadastrar o evento recorrente; cada ocorrência armazena os valores efetivos, incluindo possíveis exceções.
+- `Attendance`: vínculo pessoa/evento. Pode haver linhas históricas removidas, mas apenas uma linha ativa por pessoa/ocorrência.
+- `AuditLog`: ator, workspace, ação, entidade, data/hora, snapshot para desfazer e prazo de sete dias para restauração de dados pessoais.
 
-O schema foi revisado como rascunho, sem migração. Antes da migração, revisar associação obrigatória entre conta e membro, restrições de missão e tipo de pessoa, nomes duplicados, índices de busca e exclusões reversíveis. IDs de pessoa são globais e permanecem iguais ao mudar de missão. O aniversário é obrigatório para membros e opcional para visitantes, como data sem horário. Nomes devem ser normalizados ao salvar, mas nomes iguais continuam sendo pessoas distintas. Consultas de membros filtram por missão; relatórios históricos mantêm os totais de presenças de pessoas excluídas, ocultando sua identidade. O fluxo de auditoria precisa distinguir exclusões reversíveis das de eventos, que não podem ser restauradas. Guardar instantes de evento de forma consistente e exibir `America/Sao_Paulo` na interface.
+O schema foi revisado como rascunho, sem migração. Antes da migração, revisar as restrições condicionais entre tipo, aniversário, missão e conta de usuário. IDs de pessoa são globais e permanecem iguais ao mudar de missão. O aniversário e a data de ingresso são datas sem horário; o aniversário é obrigatório para membros e opcional para visitantes. Nomes são normalizados ao salvar, mas nomes iguais continuam sendo pessoas distintas. Consultas de membros filtram por missão; relatórios históricos mantêm os totais das presenças de pessoas excluídas, ocultando a identidade, e omitem eventos apagados. A restauração dos dados pessoais expira em sete dias. O evento e a auditoria armazenam instantes com fuso; a interface exibe `America/Sao_Paulo`.
 
 **Saída da etapa:** diagrama simples de entidades, schema revisado e restrições aprovadas.
 
@@ -68,7 +69,7 @@ O schema foi revisado como rascunho, sem migração. Antes da migração, revisa
 
 1. Manter `.env` e `apps/api/.env` locais, ignorados pelo Git, usando somente a base `presenca_development` do Compose.
 2. Instalar dependências da API e gerar o cliente Prisma.
-3. Validar o schema e criar a migração inicial com nome descritivo.
+3. Validar o schema e criar a migração inicial com nome descritivo. Incluir índice único parcial para garantir uma presença ativa por pessoa/evento, permitindo novo registro depois de remover o anterior.
 4. Aplicar a migração no PostgreSQL local.
 5. Criar um seed repetível com workspaces, contas de desenvolvimento, membros, visitantes, séries, eventos e presenças fictícias.
 6. Verificar que o seed pode ser reexecutado sem duplicar dados e sem incluir dados pessoais reais.
@@ -96,7 +97,7 @@ Implementar e revisar um módulo por vez, seguindo a dependência dos dados:
 2. **Eventos e recorrências:** séries, ocorrências, exceção de data, responsável, estados e cancelamento.
 3. **Presenças:** adicionar pessoa à ocorrência, atualizar status, impedir duplicidade e bloquear edição conforme o estado final do evento.
 4. **Relatórios:** consultas agregadas que excluem cancelados e respeitam workspace e filtros definidos.
-5. **Configurações e auditoria:** dados da comunidade, preferências e histórico das ações autorizadas. Gravar a alteração e a auditoria na mesma transação; guardar o estado anterior necessário para desfazer exclusões permitidas. Exclusão de evento não pode ser desfeita.
+5. **Configurações e auditoria:** dados da comunidade, preferências e histórico das ações autorizadas. Gravar a alteração e a auditoria na mesma transação; guardar o estado anterior necessário para desfazer exclusões durante sete dias e anonimizar os dados pessoais ao vencer o prazo. Exclusão de evento não pode ser desfeita.
 
 Endpoints REST devem usar DTOs validados, respostas e erros consistentes, paginação para listas e documentação Swagger. Operações que alteram várias tabelas devem usar transação.
 
